@@ -9,6 +9,21 @@ const config: Config = {
   theme: {
     extend: {
       colors:{
+        primary: '#32a5b5',
+        'background-light': '#FAF8F0',
+        'background-dark': '#1A202C',
+        rose: {
+          50: '#fff1f2',
+          100: '#ffe4e6',
+          200: '#fecdd3',
+          300: '#fda4af',
+          400: '#fb7185',
+          500: '#f43f5e',
+          600: '#e11d48',
+          700: '#be123c',
+          800: '#9f1239',
+          900: '#881337',
+        },
         gray:{
           50: '#eaeaea',
           100: '#bebebf',
@@ -59,6 +74,16 @@ const config: Config = {
         red:{
           1100: '#DC3545',
         },
+      },
+      fontFamily: {
+        display: ['Pacifico', 'cursive'],
+        sans: ['Lato', 'sans-serif'],
+      },
+      borderRadius: {
+        DEFAULT: '0.75rem',
+        lg: '1rem',
+        xl: '1.5rem',
+        '2xl': '2rem',
       },
       fontSize:{
         '5xl':'2.5rem',
