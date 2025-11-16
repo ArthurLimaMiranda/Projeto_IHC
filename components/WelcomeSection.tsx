@@ -2,13 +2,13 @@ import { MagnifyingGlassIcon } from "@heroicons/react/24/outline";
 
 export function WelcomeSection() {
   return (
-    <section className="bg-gradient-to-r from-pink-50 to-purple-50 py-16 text-center">
+    <section className="bg-gradient-to-r from-pink-50 to-purple-50 py-24 text-center">
       <div className="container mx-auto px-4">
         <h1 className="text-4xl font-bold text-gray-800 mb-4">
-          Bem-vindo(a)!
+          Bem-viwwndo(a)!
         </h1>
         <p className="text-xl text-gray-600 mb-8">
-          O que sua comemoração merece?
+          O que sua comemoraçãssdoee merece?
         </p>
         <div className="max-w-md mx-auto relative">
           <input

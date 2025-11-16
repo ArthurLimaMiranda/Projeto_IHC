@@ -2,28 +2,29 @@
 'use client'
 import { useState } from "react";
 import Image from "next/image";
+import { ShoppingBagIcon } from "@heroicons/react/24/outline";
 
 const produtos = [
   {
     id: 1,
-    nome: "Bolo de Brigadeiro com Chocolate Branco",
-    preco: "R$ 80,00",
-    descricao: "A melhor das três murals e cidades regulares é o sumo arquivado do chocolate branco.",
-    imagem: "/placeholder-bolo.jpg"
+    nome: "Bolo de Chocolate com Frutas Vermelhas",
+    preco: "R$ 105,00",
+    descricao: "Ganache cremosa, finalização artística em chocolate e cobertura generosa de frutas frescas.",
+    imagem: "/assets/1-4.jpeg"
   },
   {
     id: 2,
-    nome: "Bolo de Morango",
-    preco: "R$ 75,00",
+    nome: "Bolo campestre com morangos e chantilly",
+    preco: "R$ 85,00",
     descricao: "Bolo fresco com recheio de morango natural.",
-    imagem: "/placeholder-bolo2.jpg"
+    imagem: "/assets/strawberry.jpg"
   },
   {
     id: 3,
-    nome: "Bolo de Chocolate",
-    preco: "R$ 70,00",
+    nome: "Bolo Floresta Negra",
+    preco: "R$ 90,00",
     descricao: "Chocolate belga de alta qualidade.",
-    imagem: "/placeholder-bolo3.jpg"
+    imagem: "/assets/Bolo-Floresta-Negra.jpg"
   }
 ];
 
@@ -56,18 +57,21 @@ export function CarrosselProdutos() {
                     className="object-cover rounded-lg"
                   />
                 </div>
-                <h3 className="text-xl font-semibold text-gray-800 mb-2">
+                <h3 className="text-xl font-semibold text-[#4F2712] mb-2">
                   {produto.nome}
                 </h3>
-                <p className="text-2xl font-bold text-green-600 mb-2">
+                <p className="text-2xl font-bold text-[#39C24A] mb-2">
                   {produto.preco}
                 </p>
-                <p className="text-gray-600">
+                <p className="text-[#0A0A0A]">
                   {produto.descricao}
                 </p>
-                <button className="mt-4 bg-rose-500 text-white px-6 py-2 rounded-full hover:bg-rose-600 transition-colors">
-                  Comprar
-                </button>
+                <div className="flex items-center justify-start">
+                  <button className="flex gap-3 mt-4 bg-[#B95760] text-white px-7 py-3 rounded-full hover:bg-[#34A7B2] transition-colors font-semibold">
+                    <ShoppingBagIcon className="h-6 w-6 text-white" />
+                    Comprar
+                  </button>
+                </div>
               </div>
             </div>
           ))}
@@ -95,7 +99,7 @@ export function CarrosselProdutos() {
             key={index}
             onClick={() => setCurrentIndex(index)}
             className={`w-3 h-3 rounded-full transition-colors ${
-              index === currentIndex ? 'bg-rose-500' : 'bg-gray-300'
+              index === currentIndex ? 'bg-[#34A7B2]' : 'bg-gray-300'
             }`}
           />
         ))}

@@ -77,7 +77,7 @@ const config: Config = {
       },
       fontFamily: {
         display: ['Pacifico', 'cursive'],
-        sans: ['Lato', 'sans-serif'],
+        sans: ['Poppins', 'sans-serif'],
       },
       borderRadius: {
         DEFAULT: '0.75rem',
