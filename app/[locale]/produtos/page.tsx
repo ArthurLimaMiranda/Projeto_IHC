@@ -1,7 +1,7 @@
 // app/produtos/page.tsx (nova página para linkar)
 import Link from "next/link";
-import { Header } from "@/components/Header";
-import { Footer } from "@/components/Footer";
+import { Header } from "@/components/Client/Header";
+import { Footer } from "@/components/Client/Footer";
 
 export default function Produtos() {
   return (

@@ -1,5 +1,5 @@
-import { Footer } from "@/components/Footer";
-import { Header } from "@/components/Header";
+import { Footer } from "@/components/Client/Footer";
+import { Header } from "@/components/Client/Header";
 import { getScopedI18n } from "@/locales/server";
 
 async function Terms() {

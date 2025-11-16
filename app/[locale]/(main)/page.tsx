@@ -1,9 +1,9 @@
 // app/page.tsx
-import { Header } from "@/components/Header";
-import { Footer } from "@/components/Footer";
-import { CarrosselProdutos } from "@/components/CarrosselProdutos";
-import { Categorias } from "@/components/Categorias";
-import { Avaliacoes } from "@/components/Avaliacoes";
+import { Header } from "@/components/Client/Header";
+import { Footer } from "@/components/Client/Footer";
+import { CarrosselProdutos } from "@/components/Client/CarrosselProdutos";
+import { Categorias } from "@/components/Client/Categorias";
+import { Avaliacoes } from "@/components/Client/Avaliacoes";
 import {
   CakeIcon,
   HeartIcon,

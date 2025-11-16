@@ -1,6 +1,6 @@
-import { CTA } from "@/components/CTA";
-import { Footer } from "@/components/Footer";
-import { Header } from "@/components/Header";
+import { CTA } from "@/components/Client/CTA";
+import { Footer } from "@/components/Client/Footer";
+import { Header } from "@/components/Client/Header";
 import Image from "next/image";
 import Link from "next/link";
 import { getScopedI18n } from "@/locales/server";
@@ -11,7 +11,7 @@ import folhaDeSp from '../public/assets/FolhaDeSp.png'
 import globoplay from '../public/assets/Globoplay.png'
 import draft from '../public/assets/Draft.png'
 import ne10 from '../public/assets/Ne10.png'
-import { CarrosselContinuo, CarrosselSelection } from "@/components/Carrossel";
+import { CarrosselContinuo, CarrosselSelection } from "@/components/Client/Carrossel";
 
 async function About() {
 

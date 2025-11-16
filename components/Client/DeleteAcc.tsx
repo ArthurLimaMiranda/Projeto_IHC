@@ -1,5 +1,5 @@
-import { Footer } from "@/components/Footer";
-import { Header } from "@/components/Header";
+import { Footer } from "@/components/Client/Footer";
+import { Header } from "@/components/Client/Header";
 import Image from "next/image";
 import { getScopedI18n } from "@/locales/server";
 import emailIcon from '../public/assets/Email.svg'
@@ -7,7 +7,7 @@ import reuniaoIcon from '../public/assets/Reuniao.svg'
 import faleConoscoIcon from '../public/assets/FaleConoso.svg'
 import whatsappIcon from '../public/assets/whatsapp.svg'
 import foto_03 from '../public/assets/foto_03.png'
-import { MarcasBranco } from "@/components/Marcas";
+import { MarcasBranco } from "@/components/Client/Marcas";
 import Link from "next/link";
 import { CTA } from "./CTA";
 import vector from '../public/assets/Vector.svg'

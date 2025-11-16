@@ -1,10 +1,10 @@
-import { CTA } from "@/components/CTA";
-import { Footer } from "@/components/Footer";
-import { Header } from "@/components/Header";
+import { CTA } from "@/components/Client/CTA";
+import { Footer } from "@/components/Client/Footer";
+import { Header } from "@/components/Client/Header";
 
 import Image from "next/image";
 import { getScopedI18n } from "@/locales/server";
-import { Produtos } from "@/components/Produtos";
+import { Produtos } from "@/components/Client/Produtos";
 import img01 from '../public/assets/Reciclando.png'
 import selo1 from '../public/assets/Selo1.png'
 import selo2 from '../public/assets/Selo2.png'
@@ -19,8 +19,8 @@ import passo3Hover from '../public/assets/passo3Hover.png'
 import passo4Hover from '../public/assets/passo4Hover.png'
 
 
-import AutoPlayVideo from "@/components/AutoPlayVideo";
-import { MaquinSolucoesBut } from "@/components/MaquinasBut";
+import AutoPlayVideo from "@/components/Client/AutoPlayVideo";
+import { MaquinSolucoesBut } from "@/components/Client/MaquinasBut";
 import Link from "next/link";
 
 async function Solutions() {
