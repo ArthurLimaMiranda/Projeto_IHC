@@ -1,16 +1,31 @@
-// components/Admin/RegistroDespesa.tsx
 "use client";
 
 import React, { useState } from "react";
+import {
+  ArrowLeftIcon,
+  PlusIcon,
+  CameraIcon,
+  BuildingStorefrontIcon,
+  CreditCardIcon,
+  BanknotesIcon,
+  GiftTopIcon,
+  ArchiveBoxIcon,
+  MegaphoneIcon,
+  DocumentTextIcon,
+  HomeModernIcon,
+  UsersIcon,
+  FolderIcon,
+} from "@heroicons/react/24/outline";
 
+// Categorias convertidas para Heroicons
 const categories = [
-  { label: "Ingredientes", symbol: "🌾" },
-  { label: "Embalagens", symbol: "📦" },
-  { label: "Marketing", symbol: "📣" },
-  { label: "Contas", symbol: "🧾" },
-  { label: "Aluguel", symbol: "🏬" },
-  { label: "Salários", symbol: "👥" },
-  { label: "Outros", symbol: "🗂️" },
+  { label: "Ingredientes", icon: GiftTopIcon },
+  { label: "Embalagens", icon: ArchiveBoxIcon },
+  { label: "Marketing", icon: MegaphoneIcon },
+  { label: "Contas", icon: DocumentTextIcon },
+  { label: "Aluguel", icon: HomeModernIcon },
+  { label: "Salários", icon: UsersIcon },
+  { label: "Outros", icon: FolderIcon },
 ];
 
 const subcategories = ["Farinhas", "Laticínios", "Açúcares", "Frutas"];
@@ -23,7 +38,7 @@ export default function RegistroDespesa() {
     <div className="relative flex min-h-screen w-full flex-col overflow-x-hidden bg-background-light text-content-light">
       {/* Header */}
       <div className="flex items-center bg-background-light p-4 pb-2 justify-between sticky top-0 z-10">
-        <div className="cursor-pointer text-2xl">←</div>
+        <ArrowLeftIcon className="w-7 h-7 cursor-pointer" />
         <h2 className="text-lg font-bold flex-1 text-center">Registrar Despesa</h2>
         <div className="w-6"></div>
       </div>
@@ -52,14 +67,13 @@ export default function RegistroDespesa() {
           {categories.map((cat) => (
             <div
               key={cat.label}
-              className={`flex h-10 cursor-pointer items-center justify-center gap-x-2 rounded-full pl-3 pr-4 ${
-                selectedCategory === cat.label
-                  ? "bg-secondary text-background-light ring-2 ring-secondary"
-                  : "bg-subtle-light"
-              }`}
+              className={`flex h-10 cursor-pointer items-center justify-center gap-x-2 rounded-full pl-3 pr-4 transition-all shadow-sm border
+                ${selectedCategory === cat.label
+                  ? "bg-secondary text-background-light border-secondary"
+                  : "bg-subtle-light border-transparent"}`}
               onClick={() => setSelectedCategory(cat.label)}
             >
-              <span className="text-xl">{cat.symbol}</span>
+              <cat.icon className="w-5 h-5" />
               <p className="text-sm font-medium">{cat.label}</p>
             </div>
           ))}
@@ -102,10 +116,11 @@ export default function RegistroDespesa() {
 
         {/* Mais detalhes */}
         <button className="flex items-center gap-2 text-accent-1 font-bold">
-          ➕ Mais detalhes
+          <PlusIcon className="w-5 h-5" />
+          Mais detalhes
         </button>
 
-        {/* Fornecedor / Tipo de pagamento / Foto */}
+        {/* Fornecedor / Pagamento / Foto */}
         <div className="flex flex-col gap-6 pt-6">
           <label className="flex flex-col">
             <p className="text-base font-medium pb-2">Fornecedor / Loja (opcional)</p>
@@ -127,8 +142,9 @@ export default function RegistroDespesa() {
 
           <div>
             <p className="text-base font-medium pb-2">Foto do Comprovante (opcional)</p>
-            <button className="w-full h-14 rounded-lg border-2 border-dashed border-accent-1/50 bg-subtle-light text-accent-1 font-bold">
-              📸 Anexar Foto
+            <button className="w-full h-14 rounded-lg border-2 border-dashed border-accent-1/50 bg-subtle-light text-accent-1 font-bold flex items-center justify-center gap-2">
+              <CameraIcon className="w-6 h-6" />
+              Anexar Foto
             </button>
           </div>
         </div>
