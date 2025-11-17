@@ -8,85 +8,45 @@ import {
   TrashIcon, 
   PlusIcon, 
   MinusIcon,
-  ShoppingBagIcon 
+  ShoppingBagIcon,
+  ChevronDownIcon,
+  ChevronUpIcon
 } from '@heroicons/react/24/outline';
-
-// Dados mockados do carrinho
-const initialCartItems = [
-  {
-    id: 1,
-    name: 'Bolo de Cenoura Personalizado',
-    description: 'Cobertura de chocolate, 2kg',
-    price: 25.00,
-    quantity: 1,
-    image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuAb_b1jWKIxL7lnYTAD__ivawYBWM1w5OpSC1b3rMVajWP4DGfeco-O2Ay8yoaZxqZyEUN97C7OypOcE-tdtXXd_l9qACMdKLMDs0SzQBatCe1J3gms2FOuiXYVw2Lej4c_RgWqnCqMOs0IfpMSehFoZUoaO4jc8hjIt_9uM-kjQ4o9_KhSqOUuRUdNM742EtOEQLI-xjelyeNvKcEMD0V8CLD85xofKkZNiiafEEIIMRQ0ewc3lSwno47kygPebebAowZFbyoXKizH',
-    customization: {
-      flavor: 'Chocolate',
-      frosting: 'Buttercream Clássico',
-      toppings: ['Frutas Frescas']
-    }
-  },
-  {
-    id: 2,
-    name: 'Kit Red Velvet',
-    description: '6 cupcakes temáticos',
-    price: 32.00,
-    quantity: 1,
-    image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuAb14ENEoM-GV2QzJpRdU-Co5Z2PlgxzBBDiJqUbC8TLtbrK1PVr0tEKBzsWVu9PifUeMifMRySBLfDn6trYkpiMHddAT6ID1Z2oOM42ZnVnX4vU7s4j5OIr3blR6mr-bfwHaYdjo_AHq0wfQ8_9LX1iWV_s6Mti9wEdTkPnVqKEWX4LqqrpW7k1Ex8gb34iKKfoSfwOmZ_XaN8QpbzNOMdA6UCqRckbFOhzMZv5lo0Ecb342jJz9lnRqww8El1Ze3IuBkDj0dDp4x7',
-    customization: {
-      flavor: 'Red Velvet',
-      frosting: 'Cream Cheese',
-      toppings: ['Flores Comestíveis']
-    }
-  },
-];
+import { Header } from '@/components/Client/Header';
+import { useCart } from '@/contexts/CartContext';
 
 export default function CartPage() {
   const router = useRouter();
-  const [cartItems, setCartItems] = useState(initialCartItems);
+  const { cartItems, updateQuantity, removeFromCart, getCartTotal } = useCart();
+  const [expandedItems, setExpandedItems] = useState<number[]>([]);
 
-  const updateQuantity = (id: number, newQuantity: number) => {
-    if (newQuantity < 1) return;
-    setCartItems(prev =>
-      prev.map(item =>
-        item.id === id ? { ...item, quantity: newQuantity } : item
-      )
+  const deliveryFee = 8.00;
+  const total = getCartTotal() + deliveryFee;
+
+  const toggleItemDetails = (itemId: number) => {
+    setExpandedItems(prev =>
+      prev.includes(itemId)
+        ? prev.filter(id => id !== itemId)
+        : [...prev, itemId]
     );
   };
 
-  const removeItem = (id: number) => {
-    setCartItems(prev => prev.filter(item => item.id !== id));
-  };
-
-  const subtotal = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
-  const deliveryFee = 8.00;
-  const total = subtotal + deliveryFee;
-
   const handleCheckout = () => {
+    if (cartItems.length === 0) {
+      alert('Seu carrinho está vazio!');
+      return;
+    }
     router.push('/checkout');
   };
 
   const handleContinueShopping = () => {
-    router.push('/products');
+    router.push('/');
   };
 
   if (cartItems.length === 0) {
     return (
-      <div className="min-h-screen bg-rose-50 font-display">
-        <header className="sticky top-0 z-10 flex items-center justify-between bg-white/80 p-4 backdrop-blur-sm border-b border-rose-100">
-          <button 
-            onClick={() => router.back()}
-            className="flex items-center justify-center w-10 h-10 rounded-full bg-white/50 text-rose-600 hover:text-rose-700 transition-colors"
-          >
-            <ArrowLeftIcon className="h-6 w-6" />
-          </button>
-          
-          <div className="flex-1 text-center">
-            <h1 className="text-xl font-bold text-rose-600">Juju Bolos Decorados</h1>
-          </div>
-          
-          <div className="w-10 h-10"></div>
-        </header>
+      <div className="min-h-screen bg-rose-50">
+        <Header />
 
         <div className="flex flex-col items-center justify-center py-20 px-4 text-center">
           <ShoppingBagIcon className="h-24 w-24 text-rose-200 mb-6" />
@@ -106,22 +66,8 @@ export default function CartPage() {
   }
 
   return (
-    <div className="min-h-screen bg-rose-50 font-display">
-      {/* Header */}
-      <header className="sticky top-0 z-10 flex items-center justify-between bg-white/80 p-4 backdrop-blur-sm border-b border-rose-100">
-        <button 
-          onClick={() => router.back()}
-          className="flex items-center justify-center w-10 h-10 rounded-full bg-white/50 text-rose-600 hover:text-rose-700 transition-colors"
-        >
-          <ArrowLeftIcon className="h-6 w-6" />
-        </button>
-        
-        <div className="flex-1 text-center">
-          <h1 className="text-xl font-bold text-rose-600">Juju Bolos Decorados</h1>
-        </div>
-        
-        <div className="w-10 h-10"></div>
-      </header>
+    <div className="min-h-screen bg-rose-50">
+      <Header />
 
       {/* Page Title */}
       <div className="px-4 pt-4 pb-2">
@@ -131,63 +77,107 @@ export default function CartPage() {
 
       {/* Cart Items List */}
       <main className="flex-grow px-4 pb-40">
-        {cartItems.map((item) => (
-          <div key={item.id} className="flex gap-4 bg-white p-4 my-4 rounded-xl shadow-sm border border-rose-100">
-            <img
-              src={item.image}
-              alt={item.name}
-              className="w-20 h-20 rounded-lg object-cover flex-shrink-0"
-            />
-            <div className="flex flex-1 flex-col justify-between">
-              <div>
-                <p className="font-semibold text-base text-gray-800">{item.name}</p>
-                <p className="text-rose-600/80 text-sm mb-2">{item.description}</p>
-                
-                {/* Customization Details */}
-                <div className="text-xs text-gray-500 space-y-1">
-                  <p><strong>Sabor:</strong> {item.customization.flavor}</p>
-                  <p><strong>Cobertura:</strong> {item.customization.frosting}</p>
-                  {item.customization.toppings.length > 0 && (
-                    <p><strong>Toppings:</strong> {item.customization.toppings.join(', ')}</p>
-                  )}
-                </div>
-              </div>
-              
-              <div className="flex items-center justify-between mt-3">
-                <p className="text-rose-600 font-bold text-base">
-                  R$ {(item.price * item.quantity).toFixed(2)}
-                </p>
-                
-                <div className="flex items-center gap-3">
+        {cartItems.map((item) => {
+          const isExpanded = expandedItems.includes(item.id);
+          
+          return (
+            <div key={item.id} className="bg-white p-4 my-4 rounded-xl shadow-sm border border-rose-100">
+              <div className="flex gap-4">
+                <img
+                  src={item.image}
+                  alt={item.name}
+                  className="w-16 h-16 rounded-lg object-cover flex-shrink-0"
+                />
+                <div className="flex flex-1 flex-col">
+                  <div className="flex justify-between items-start">
+                    <div className="flex-1">
+                      <p className="font-semibold text-base text-gray-800">{item.name}</p>
+                      <p className="text-rose-600 font-bold text-base mt-1">
+                        R$ {(item.price * item.quantity).toFixed(2)}
+                      </p>
+                    </div>
+                    
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => updateQuantity(item.id, item.quantity - 1)}
+                        className="flex h-6 w-6 items-center justify-center rounded-full bg-rose-100 text-rose-600 hover:bg-rose-200 transition-colors"
+                      >
+                        <MinusIcon className="h-3 w-3" />
+                      </button>
+                      
+                      <span className="text-base font-medium w-6 text-center">
+                        {item.quantity}
+                      </span>
+                      
+                      <button
+                        onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                        className="flex h-6 w-6 items-center justify-center rounded-full bg-rose-100 text-rose-600 hover:bg-rose-200 transition-colors"
+                      >
+                        <PlusIcon className="h-3 w-3" />
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Resumo das customizações */}
+                  <div className="mt-2 text-xs text-gray-500">
+                    <p><strong>Sabor:</strong> {item.customization?.flavor}</p>
+                    {item.customization?.frosting && item.customization.frosting !== 'Nenhuma' && (
+                      <p><strong>Cobertura:</strong> {item.customization.frosting}</p>
+                    )}
+                  </div>
+
+                  {/* Botão para expandir detalhes */}
                   <button
-                    onClick={() => updateQuantity(item.id, item.quantity - 1)}
-                    className="flex h-8 w-8 items-center justify-center rounded-full bg-rose-100 text-rose-600 hover:bg-rose-200 transition-colors"
+                    onClick={() => toggleItemDetails(item.id)}
+                    className="flex items-center gap-1 text-rose-500 text-xs mt-2 hover:text-rose-600 transition-colors"
                   >
-                    <MinusIcon className="h-4 w-4" />
-                  </button>
-                  
-                  <span className="text-base font-medium w-8 text-center">
-                    {item.quantity}
-                  </span>
-                  
-                  <button
-                    onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                    className="flex h-8 w-8 items-center justify-center rounded-full bg-rose-100 text-rose-600 hover:bg-rose-200 transition-colors"
-                  >
-                    <PlusIcon className="h-4 w-4" />
+                    {isExpanded ? (
+                      <>
+                        <ChevronUpIcon className="h-3 w-3" />
+                        Menos detalhes
+                      </>
+                    ) : (
+                      <>
+                        <ChevronDownIcon className="h-3 w-3" />
+                        Mais detalhes
+                      </>
+                    )}
                   </button>
                 </div>
+                
+                <button
+                  onClick={() => removeFromCart(item.id)}
+                  className="flex-shrink-0 text-rose-400 hover:text-rose-600 transition-colors self-start"
+                >
+                  <TrashIcon className="h-5 w-5" />
+                </button>
               </div>
+
+              {/* Detalhes expandidos */}
+              {isExpanded && item.customization && (
+                <div className="mt-3 pt-3 border-t border-rose-100">
+                  <div className="text-sm text-gray-600 space-y-1">
+                    {item.customization.toppings && item.customization.toppings.length > 0 && (
+                      <div>
+                        <strong>Toppings:</strong> {item.customization.toppings.join(', ')}
+                      </div>
+                    )}
+                    {item.customization.addOns && item.customization.addOns.length > 0 && (
+                      <div>
+                        <strong>Add-Ons:</strong> {item.customization.addOns.join(', ')}
+                      </div>
+                    )}
+                    {item.customization.extras && item.customization.extras.length > 0 && (
+                      <div>
+                        <strong>Extras:</strong> {item.customization.extras.join(', ')}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
-            
-            <button
-              onClick={() => removeItem(item.id)}
-              className="flex-shrink-0 text-rose-400 hover:text-rose-600 transition-colors self-start"
-            >
-              <TrashIcon className="h-5 w-5" />
-            </button>
-          </div>
-        ))}
+          );
+        })}
 
         {/* Continue Shopping */}
         <div className="text-center mt-8">
@@ -207,7 +197,7 @@ export default function CartPage() {
           <div className="pb-4">
             <div className="flex justify-between gap-x-6 py-1.5">
               <p className="text-gray-600 text-sm">Subtotal</p>
-              <p className="font-medium text-sm text-right">R$ {subtotal.toFixed(2)}</p>
+              <p className="font-medium text-sm text-right">R$ {getCartTotal().toFixed(2)}</p>
             </div>
             <div className="flex justify-between gap-x-6 py-1.5">
               <p className="text-gray-600 text-sm">Taxa de Entrega</p>

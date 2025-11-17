@@ -4,23 +4,21 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowLeftIcon, ShoppingCartIcon } from '@heroicons/react/24/outline';
+import { Header } from '@/components/Client/Header';
+import { useCart } from '@/contexts/CartContext';
 
-// Dados mockados
-const orderItems = [
-  {
-    id: 1,
-    name: 'Bolo de Chocolate Personalizado',
-    description: '2kg com recheio de brigadeiro',
-    price: 80.00,
-    quantity: 1,
-  },
-];
-
-const deliveryFee = 10.00;
-const total = orderItems.reduce((sum, item) => sum + item.price * item.quantity, 0) + deliveryFee;
+// Função para calcular a data de entrega estimada (3 dias a partir de agora)
+const calculateEstimatedDelivery = () => {
+  const now = new Date();
+  const estimatedDelivery = new Date(now);
+  estimatedDelivery.setDate(now.getDate() + 3); // 3 dias a partir de hoje
+  estimatedDelivery.setHours(18, 0, 0, 0); // Entrega às 18:00
+  return estimatedDelivery.toISOString();
+};
 
 export default function CheckoutPage() {
   const router = useRouter();
+  const { cartItems, getCartTotal, clearCart } = useCart();
   const [formData, setFormData] = useState({
     name: '',
     address: '',
@@ -28,6 +26,14 @@ export default function CheckoutPage() {
     paymentMethod: 'pix' as 'pix' | 'credit-card' | 'cash',
     notes: '',
   });
+
+  const deliveryFee = 8.00;
+  const subtotal = getCartTotal();
+  const total = subtotal + deliveryFee;
+
+  // Calcular desconto do PIX (5%)
+  const pixDiscount = formData.paymentMethod === 'pix' ? total * 0.05 : 0;
+  const finalTotal = formData.paymentMethod === 'pix' ? total - pixDiscount : total;
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -40,37 +46,57 @@ export default function CheckoutPage() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    // Aqui você integraria com a API de pagamento
-    console.log('Dados do pedido:', formData);
-    // Redirecionar para confirmação
-    router.push('/order-confirmation');
+    
+    // Validar campos obrigatórios
+    if (!formData.name || !formData.address || !formData.phone) {
+      alert('Por favor, preencha todos os campos obrigatórios!');
+      return;
+    }
+
+    if (cartItems.length === 0) {
+      alert('Seu carrinho está vazio!');
+      return;
+    }
+
+    // Criar objeto do pedido
+    const order = {
+      id: 'JUJU' + Date.now().toString().slice(-6),
+      customer: formData,
+      items: cartItems,
+      subtotal,
+      deliveryFee,
+      discount: pixDiscount,
+      total: finalTotal,
+      paymentMethod: formData.paymentMethod,
+      orderDate: new Date().toISOString(),
+      estimatedDelivery: calculateEstimatedDelivery(),
+      status: 'PENDING',
+      timeline: [
+        {
+          status: 'PENDING',
+          timestamp: new Date().toISOString(),
+          description: 'Pedido recebido'
+        }
+      ]
+    };
+
+    // Salvar pedido no localStorage
+    const existingOrders = JSON.parse(localStorage.getItem('juju-orders') || '[]');
+    existingOrders.push(order);
+    localStorage.setItem('juju-orders', JSON.stringify(existingOrders));
+
+    // Limpar carrinho
+    clearCart();
+
+    // Redirecionar para confirmação, passando o ID do pedido
+    router.push(`/order-confirmation?orderId=${order.id}`);
   };
 
   return (
-    <div className="min-h-screen bg-rose-50 font-sans">
-      {/* Header */}
-      <header className="sticky top-0 z-10 flex items-center justify-between bg-white/80 p-4 backdrop-blur-sm border-b border-rose-100">
-        <button 
-          onClick={() => router.back()}
-          className="flex items-center text-rose-600 hover:text-rose-700 transition-colors"
-        >
-          <ArrowLeftIcon className="h-6 w-6" />
-        </button>
-        
-        <div className="text-center">
-          <h1 className="font-display text-3xl text-rose-600">Juju</h1>
-          <p className="text-sm font-bold tracking-wider text-gray-500">BOLOS DECORADOS</p>
-        </div>
-        
-        <button 
-          onClick={() => router.push('/cart')}
-          className="text-rose-600 hover:text-rose-700 transition-colors"
-        >
-          <ShoppingCartIcon className="h-6 w-6" />
-        </button>
-      </header>
+    <div className="min-h-screen bg-rose-50">
+      <Header />
 
-      <main className="container mx-auto max-w-md p-4 space-y-6">
+      <main className="container mx-auto max-w-md p-4 space-y-6 pb-32">
         <h2 className="text-2xl font-bold text-center text-gray-800">Finalize seu Pedido</h2>
         
         <form onSubmit={handleSubmit} className="space-y-6">
@@ -80,7 +106,7 @@ export default function CheckoutPage() {
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-600 mb-1" htmlFor="name">
-                  Nome Completo
+                  Nome Completo *
                 </label>
                 <input
                   type="text"
@@ -96,7 +122,7 @@ export default function CheckoutPage() {
               
               <div>
                 <label className="block text-sm font-medium text-gray-600 mb-1" htmlFor="address">
-                  Endereço de Entrega
+                  Endereço de Entrega *
                 </label>
                 <input
                   type="text"
@@ -106,13 +132,13 @@ export default function CheckoutPage() {
                   onChange={handleInputChange}
                   required
                   className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-rose-500 focus:border-transparent"
-                  placeholder="Rua, Número, Bairro"
+                  placeholder="Rua, Número, Bairro, Cidade - Estado"
                 />
               </div>
               
               <div>
                 <label className="block text-sm font-medium text-gray-600 mb-1" htmlFor="phone">
-                  Telefone para Contato
+                  Telefone para Contato *
                 </label>
                 <input
                   type="tel"
@@ -137,7 +163,7 @@ export default function CheckoutPage() {
                   onChange={handleInputChange}
                   rows={3}
                   className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-rose-500 focus:border-transparent"
-                  placeholder="Alguma observação sobre a entrega?"
+                  placeholder="Alguma observação sobre a entrega? Ponto de referência, horário preferencial, etc."
                 />
               </div>
             </div>
@@ -147,26 +173,50 @@ export default function CheckoutPage() {
           <section>
             <h3 className="text-lg font-bold mb-3 text-gray-700">Resumo do Pedido</h3>
             <div className="bg-white p-4 rounded-lg shadow space-y-3">
-              {orderItems.map((item) => (
+              {cartItems.map((item) => (
                 <div key={item.id} className="flex justify-between text-gray-700">
-                  <div>
-                    <span className="font-medium">{item.name}</span>
-                    <p className="text-sm text-gray-500">{item.description}</p>
+                  <div className="flex-1">
+                    <div className="font-medium">{item.name}</div>
+                    <div className="text-sm text-gray-500">
+                      {item.quantity}x R$ {item.price.toFixed(2)}
+                      {item.customization && (
+                        <div className="mt-1 text-xs">
+                          <div><strong>Sabor:</strong> {item.customization.flavor}</div>
+                          {item.customization.frosting && item.customization.frosting !== 'Nenhuma' && (
+                            <div><strong>Cobertura:</strong> {item.customization.frosting}</div>
+                          )}
+                        </div>
+                      )}
+                    </div>
                   </div>
-                  <span>R$ {item.price.toFixed(2)}</span>
+                  <span className="font-semibold whitespace-nowrap ml-2">
+                    R$ {(item.price * item.quantity).toFixed(2)}
+                  </span>
                 </div>
               ))}
+              
+              <div className="flex justify-between text-gray-700">
+                <span>Subtotal</span>
+                <span>R$ {subtotal.toFixed(2)}</span>
+              </div>
               
               <div className="flex justify-between text-gray-700">
                 <span>Taxa de Entrega</span>
                 <span>R$ {deliveryFee.toFixed(2)}</span>
               </div>
+
+              {formData.paymentMethod === 'pix' && (
+                <div className="flex justify-between text-green-600">
+                  <span>Desconto PIX (5%)</span>
+                  <span>- R$ {pixDiscount.toFixed(2)}</span>
+                </div>
+              )}
               
               <div className="border-t border-gray-200 pt-2 mt-2" />
               
               <div className="flex justify-between font-bold text-lg text-gray-800">
                 <span>Total</span>
-                <span>R$ {total.toFixed(2)}</span>
+                <span>R$ {finalTotal.toFixed(2)}</span>
               </div>
             </div>
           </section>
@@ -190,11 +240,18 @@ export default function CheckoutPage() {
                       ? 'border-rose-500 bg-rose-500'
                       : 'border-gray-400'
                   }`} />
-                  <span className="font-medium text-gray-800">PIX</span>
+                  <div>
+                    <span className="font-medium text-gray-800">PIX</span>
+                    <p className="text-sm text-gray-600 mt-1">
+                      Pagamento instantâneo com 5% de desconto
+                    </p>
+                    {formData.paymentMethod === 'pix' && (
+                      <p className="text-green-600 text-sm font-medium mt-1">
+                        Economize R$ {pixDiscount.toFixed(2)}
+                      </p>
+                    )}
+                  </div>
                 </div>
-                <p className="text-sm text-gray-600 mt-1 ml-7">
-                  Pagamento instantâneo com 5% de desconto
-                </p>
               </button>
 
               <button
@@ -242,19 +299,22 @@ export default function CheckoutPage() {
               </button>
             </div>
           </section>
-
-          {/* Botão de Confirmação */}
-          <div className="pt-4">
-            <button
-              type="submit"
-              className="w-full bg-rose-500 hover:bg-rose-600 text-white font-bold py-4 px-6 rounded-lg shadow-lg transition-colors flex items-center justify-center gap-2"
-            >
-              <ShoppingCartIcon className="h-5 w-5" />
-              Confirmar Pedido - R$ {total.toFixed(2)}
-            </button>
-          </div>
         </form>
       </main>
+
+      {/* Fixed Footer */}
+      <footer className="fixed bottom-0 left-0 right-0 bg-white/95 p-4 border-t border-rose-100 shadow-lg">
+        <div className="max-w-md mx-auto">
+          <button
+            type="submit"
+            onClick={handleSubmit}
+            className="w-full bg-rose-500 hover:bg-rose-600 text-white font-bold py-4 px-6 rounded-lg shadow-lg transition-colors flex items-center justify-center gap-2"
+          >
+            <ShoppingCartIcon className="h-5 w-5" />
+            Confirmar Pedido - R$ {finalTotal.toFixed(2)}
+          </button>
+        </div>
+      </footer>
     </div>
   );
 }

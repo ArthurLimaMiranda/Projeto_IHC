@@ -1,4 +1,4 @@
-// contexts/CartContext.tsx
+// contexts/CartContext.tsx (atualização)
 'use client';
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
@@ -15,6 +15,7 @@ export interface CartItem {
     frosting: string;
     toppings: string[];
     addOns: string[];
+    extras: string[];
   };
 }
 
@@ -26,6 +27,9 @@ interface CartContextType {
   clearCart: () => void;
   getCartTotal: () => number;
   getCartItemsCount: () => number;
+  // Novo: Salvar dados do pedido para rastreamento
+  saveOrder: (orderData: any) => void;
+  getOrdersByPhone: (phone: string) => any[];
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
@@ -86,6 +90,36 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return cartItems.reduce((count, item) => count + item.quantity, 0);
   };
 
+  // Salvar pedido para rastreamento
+  const saveOrder = (orderData: any) => {
+    const orders = JSON.parse(localStorage.getItem('juju-orders') || '[]');
+    const newOrder = {
+      ...orderData,
+      id: 'JUJU' + Date.now().toString().slice(-6),
+      orderDate: new Date().toISOString(),
+      status: 'PENDING',
+      timeline: [
+        {
+          status: 'PENDING',
+          timestamp: new Date().toISOString(),
+          description: 'Pedido recebido'
+        }
+      ]
+    };
+    
+    orders.push(newOrder);
+    localStorage.setItem('juju-orders', JSON.stringify(orders));
+    return newOrder;
+  };
+
+  // Buscar pedidos por telefone
+  const getOrdersByPhone = (phone: string) => {
+    const orders = JSON.parse(localStorage.getItem('juju-orders') || '[]');
+    return orders.filter((order: any) => 
+      order.customer.phone.replace(/\D/g, '') === phone.replace(/\D/g, '')
+    );
+  };
+
   return (
     <CartContext.Provider value={{
       cartItems,
@@ -94,7 +128,9 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
       removeFromCart,
       clearCart,
       getCartTotal,
-      getCartItemsCount
+      getCartItemsCount,
+      saveOrder,
+      getOrdersByPhone
     }}>
       {children}
     </CartContext.Provider>
