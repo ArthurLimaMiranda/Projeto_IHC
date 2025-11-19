@@ -103,28 +103,42 @@ export default function Dashboard() {
     {/* Action Buttons */}
     <div className="grid grid-cols-2 gap-4 p-6">
     {/* Botão 1 */}
-    <button className="flex bg-[#34A7B2] flex-col items-center justify-center gap-2 rounded-xl p-4 text-white text-center shadow-sm transition-transform hover:scale-105">
-        <BanknotesIcon className="h-6 w-6 text-white" />
-        <span className="text-sm font-semibold">Registrar Despesa</span>
-    </button>
+    <Link
+      href="/registrodespesa"
+      className="flex bg-[#34A7B2] flex-col items-center justify-center gap-2 rounded-xl p-4 text-white text-center shadow-sm transition-transform hover:scale-105"
+    >
+      <BanknotesIcon className="h-6 w-6 text-white" />
+      <span className="text-sm font-semibold">Registrar Despesa</span>
+    </Link>
 
     {/* Botão 2 */}
-    <button className="flex bg-[#B95760] flex-col items-center justify-center gap-2 rounded-xl p-4 text-white text-center shadow-sm transition-transform hover:scale-105">
-        <DocumentChartBarIcon className="h-6 w-6 text-white" />
-        <span className="text-sm font-semibold">Gerar Relatório</span>
-    </button>
+    <Link
+      href="/dashboard-financeiro"
+      className="flex bg-[#B95760] flex-col items-center justify-center gap-2 rounded-xl p-4 text-white text-center shadow-sm transition-transform hover:scale-105"
+    >
+      <DocumentChartBarIcon className="h-6 w-6 text-white" />
+      <span className="text-sm font-semibold">Gerar Relatório</span>
+    </Link>
 
     {/* Botão 3 */}
-    <button className="flex bg-[#B95760] flex-col items-center justify-center gap-2 rounded-xl p-4 text-white text-center shadow-sm transition-transform hover:scale-105">
-        <CubeIcon className="h-6 w-6 text-white" />
-        <span className="text-sm font-semibold">Gerenciar Estoque</span>
-    </button>
+    <Link
+      href="/estoque"
+      className="flex bg-[#B95760] flex-col items-center justify-center gap-2 rounded-xl p-4 text-white text-center shadow-sm transition-transform hover:scale-105"
+    >
+      <CubeIcon className="h-6 w-6 text-white" />
+      <span className="text-sm font-semibold">Gerenciar Estoque</span>
+    </Link>
+
 
     {/* Botão 4 */}
-    <button className="flex bg-[#34A7B2] flex-col items-center justify-center gap-2 rounded-xl p-4 text-white text-center shadow-sm transition-transform hover:scale-105">
-        <CalendarIcon className="h-6 w-6 text-white" />
-        <span className="text-sm font-semibold">Gerenciar Agenda</span>
-    </button>
+    <Link
+      href="/agenda"
+      className="flex bg-[#34A7B2] flex-col items-center justify-center gap-2 rounded-xl p-4 text-white text-center shadow-sm transition-transform hover:scale-105"
+    >
+      <CalendarIcon className="h-6 w-6 text-white" />
+      <span className="text-sm font-semibold">Gerenciar Agenda</span>
+    </Link>
+
     </div>
 
       {/* Next Deliveries */}

@@ -9,7 +9,11 @@ import {
   StopIcon,
   CheckCircleIcon,
   ClockIcon,
+  ArrowLeftIcon
 } from "@heroicons/react/24/solid";
+import MenuInferior from "@/components/Admin/MenuInferior";
+import { useRouter } from "next/navigation";
+
 
 // Helpers --------------------------------------------------------------
 const weekDays = ["D", "S", "T", "Q", "Q", "S", "S"]; // Domingo → Sábado
@@ -39,6 +43,8 @@ function getMonthMatrix(year, month) {
 
 // Main Component --------------------------------------------------------
 export default function AgendaPage() {
+  const router = useRouter(); 
+
   const [selectedView, setSelectedView] = useState("Semana");
   const [currentDate, setCurrentDate] = useState(new Date(2025, 0, 1)); // 2025
   const [selectedDay, setSelectedDay] = useState(new Date(2025, 0, 1));
@@ -98,34 +104,36 @@ export default function AgendaPage() {
   );
 
   return (
-    <div className="min-h-screen w-full bg-background-light">
+    <div className="min-h-screen w-full bg-[#FFFFF4]">
       {/* Top App Bar */}
-      <div className="sticky top-0 z-10 flex items-center bg-background-light p-4 pb-2 justify-between">
-        <div className="flex size-12 items-center">
-          <button className="text-[#4F2712] h-12 text-primary">
-            <Bars3Icon className="w-8 h-8" />
-          </button>
+        <div className="sticky top-0 z-10 flex items-center bg-[#EEEDDF] p-4 pb-2 justify-between">
+            <div className="flex size-12 items-center">
+                <button
+                onClick={() => router.back()}
+                className="text-[#4F2712] h-12"
+                >
+                <ArrowLeftIcon className="w-8 h-8 text-[#4F2712]" />
+                </button>
         </div>
-
         <h2 className="text-[#4F2712] text-lg font-bold flex-1 text-center">
         Minha Agenda
         </h2>
 
         <div className="flex w-12 items-center justify-end">
           <button className="h-12 text-primary text-[#4F2712]">
-            <BellIcon className="w-8 h-8" />
+            <BellIcon className="w-8 h-8 text-[#4F2712]" />
           </button>
         </div>
       </div>
 
       {/* View Selector */}
-      <div className="flex px-4 py-3">
-        <div className="flex h-10 flex-1 items-center justify-center rounded-lg bg-primary/10 p-1">
+      <div className="flex px-4 py-3 pt-6 pb-4">
+        <div className="flex h-10 flex-1 items-center justify-center rounded-md bg-[#edebdd] p-1">
           {["Dia", "Semana", "Mês"].map((view) => (
             <label
               key={view}
-              className={`flex cursor-pointer h-full grow items-center justify-center rounded-lg px-2 text-sm font-medium ${
-                selectedView === view ? "bg-primary text-white shadow-md" : "text-primary/80"
+              className={`flex cursor-pointer h-full grow items-center justify-center rounded-md px-2 text-sm font-medium ${
+                selectedView === view ? "bg-[#4F2712] text-white shadow-md" : "text-[#4F2712]"
               }`}
             >
               <span>{view}</span>
@@ -144,25 +152,25 @@ export default function AgendaPage() {
       <div className="flex flex-wrap items-center justify-center gap-6 px-4">
         <div className="flex min-w-full max-w-full flex-col gap-0.5">
           <div className="flex items-center p-1 justify-between text-[#4F2712]">
-            <button className="text-primary" onClick={handlePrevMonth}>
-              <ChevronLeftIcon className="w-8 h-8" />
+            <button className="text-primary text-[#4F2712]" onClick={handlePrevMonth}>
+              <ChevronLeftIcon className="w-8 h-8 text-[#4F2712]" />
             </button>
 
-            <p className="text-primary text-base font-bold text-center flex-1">
-              {monthNames[month]} {year}
+            <p className="text-[#4F2712] text-base font-bold text-center flex-1">
+            {monthNames[month]} {year}
             </p>
 
             <button className="text-primary" onClick={handleNextMonth}>
-              <ChevronRightIcon className="w-8 h-8" />
+              <ChevronRightIcon className="w-8 h-8 text-[#4F2712]" />
             </button>
           </div>
 
           {/* Week Days */}
-          <div className="grid grid-cols-7 text-primary">
+          <div className="grid grid-cols-7 text-primary text-[#B95760]">
             {weekDays.map((d) => (
               <p
                 key={d}
-                className="text-[13px] font-bold flex h-12 w-full items-center justify-center"
+                className="text-[13px] font-bold flex h-12 w-full items-center justify-center text-[#B95760]"
               >
                 {d}
               </p>
@@ -186,7 +194,7 @@ export default function AgendaPage() {
                 >
                   <div
                     className={`flex size-full items-center justify-center rounded-full ${
-                      isSelected ? "bg-primary text-white" : ""
+                      isSelected ? "bg-[#4F2712] text-white" : "text-[#4F2712]"
                     }`}
                   >
                     {d.num}
@@ -206,27 +214,27 @@ export default function AgendaPage() {
         <div className="flex items-center justify-center gap-4 text-xs text-primary/80">
           <div className="flex items-center gap-2">
             <div className="size-3 rounded-full bg-event-pending"></div>
-            <span>Pendente</span>
+            <span className="text-[#B95760] text-lg">Pendente</span>
           </div>
           <div className="flex items-center gap-2">
             <div className="size-3 rounded-full bg-event-completed"></div>
-            <span>Entregue</span>
+            <span className="text-[#B95760] text-lg">Entregue</span>
           </div>
           <div className="flex items-center gap-2">
             <div className="size-3 rounded-full bg-event-block"></div>
-            <span>Bloqueio</span>
+            <span className="text-[#B95760] text-lg">Bloqueio</span>
           </div>
         </div>
 
         <hr className="border-primary/10" />
 
-        <h3 className="text-base font-bold text-primary">
+        <h3 className="text-base font-bold text-[#4F2712]">
           Eventos do dia {selectedDay.getDate()}
         </h3>
 
         <div className="flex flex-col gap-3">
           {todayEvents.length === 0 && (
-            <p className="text-primary/60 text-sm">Nenhum evento.</p>
+            <p className="text-[#4F2712] text-sm">Nenhum evento.</p>
           )}
 
           {todayEvents.map((event, idx) => (
@@ -260,11 +268,12 @@ export default function AgendaPage() {
       </div>
 
       {/* FAB */}
-      <div className="fixed bottom-6 right-6">
+      <div className="fixed bottom-6 right-6 pb-14">
         <button className="flex items-center justify-center size-14 bg-primary text-white rounded-2xl shadow-lg">
           <PlusIcon className="w-10 h-10" />
         </button>
       </div>
+      < MenuInferior/>
     </div>
   );
 }
