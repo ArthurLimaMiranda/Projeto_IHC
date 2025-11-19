@@ -4,6 +4,8 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
 import { ArrowLeftIcon, Bars3Icon, XMarkIcon, ShoppingCartIcon, TruckIcon } from "@heroicons/react/24/outline";
+import logo from '../../public/assets/Logo.png'
+import Image from "next/image";
 
 export function Header() {
   const [headerOpen, setHeaderOpen] = useState(false);
@@ -19,19 +21,25 @@ export function Header() {
         <div className="flex items-center justify-between h-16">
           {/* Botão Voltar - só aparece se não estiver na home */}
           {isNotHome ? (
+            <>
             <button 
               onClick={() => router.back()}
               className="flex items-center justify-center w-10 h-10 rounded-full bg-white/50 text-rose-600 hover:text-rose-700 transition-colors"
             >
               <ArrowLeftIcon className="h-6 w-6" />
             </button>
+            <div className="w-10 h-10"></div>
+            </>
           ) : (
-            <div className="w-10 h-10"></div> // Espaçador para manter o alinhamento
+            <>
+            <div className="w-10 h-10"></div>
+            <div className="w-10 h-10"></div>
+            </>
           )}
 
           {/* Logo */}
-          <Link href="/" className="text-2xl font-bold text-rose-600">
-            Juju
+          <Link href="/" className="w-[25%]">
+            <Image src={logo} alt='logo' className="opacity-70"/>
           </Link>
 
           {/* Cart and Mobile Menu */}

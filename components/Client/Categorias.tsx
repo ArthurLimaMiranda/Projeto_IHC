@@ -10,12 +10,12 @@ export function Categorias() {
     {
       titulo: "Bolos",
       imagem: "/assets/bolo.jpg",
-      rota: "/products?category=Bolos"
+      rota: "/products?category=Todos",
     },
     {
       titulo: "Kits Personalizados",
       imagem: "/assets/salgados.jpg",
-      rota: "/customize"
+      rota: "/kits"
     },
     {
       titulo: "Portfólio",
@@ -58,7 +58,7 @@ export function Categorias() {
       {/* Terceira categoria - retângulo ocupando toda a largura */}
       <button
         onClick={() => handleCategoriaClick(categorias[2].rota)}
-        className="col-span-2 relative rounded-xl overflow-hidden cursor-pointer group h-48 md:h-64"
+        className="col-span-2 relative rounded-xl overflow-hidden cursor-pointer group h-40 md:h-64"
       >
         {/* Imagem de fundo */}
         <div

@@ -56,7 +56,7 @@ async function Home() {
           <div className="max-w-6xl mx-auto px-4">
 
             {/* Cabeçalho com título e link */}
-            <div className="flex items-center justify-between mb-8">
+            <div className="flex items-center justify-between">
               <h3 className="text-3xl font-bold text-[#4F2712]">
                 Mais Vendidos
               </h3>

@@ -85,10 +85,10 @@ export function CarrosselProdutos() {
               key={produto.id} 
               className="w-full flex-shrink-0 py-6"
             >
-              <div className="flex flex-col md:flex-row items-center gap-6 px-4">
+              <div className="flex flex-col md:flex-row items-center gap-6">
                 {/* Image Container - Agora com posicionamento relativo para as setas */}
                 <div className="w-full md:w-1/2 relative">
-                  <div className="relative h-64 md:h-80 rounded-lg overflow-hidden">
+                  <div className="relative h-44 md:h-80 rounded-lg overflow-hidden">
                     <Image
                       src={produto.imagem}
                       alt={produto.nome}
@@ -121,14 +121,14 @@ export function CarrosselProdutos() {
                 </div>
                 
                 {/* Content */}
-                <div className="w-full md:w-1/2 space-y-4">
+                <div className="w-full md:w-1/2 space-y-4 px-4">
                   <h3 className="text-xl font-bold text-gray-800">
                     {produto.nome}
                   </h3>
-                  <p className="text-3xl font-bold text-rose-600">
+                  <p className="text-lg font-bold text-rose-600">
                     R$ {produto.preco}
                   </p>
-                  <p className="text-gray-600 leading-relaxed">
+                  <p className="text-gray-600 leading-relaxed text-sm">
                     {produto.descricao}
                   </p>
                   <button 
