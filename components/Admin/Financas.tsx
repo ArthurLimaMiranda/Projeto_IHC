@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import Link from "next/link";
 import {
   ArrowLeftIcon,
   PlusIcon,
@@ -16,14 +17,17 @@ import {
   QuestionMarkCircleIcon
 } from "@heroicons/react/24/outline";
 import MenuInferior from "@/components/Admin/MenuInferior";
+import { useRouter } from "next/navigation";
 
 export default function FinancasPage() {
+  const router = useRouter();
   return (
     <div className="relative flex min-h-screen w-full flex-col overflow-x-hidden bg-[#FFFFF4]">
       {/* Top App Bar */}
       <header className="flex items-center bg-[#EEEDDF] p-4 pb-2 justify-between sticky top-0 z-10">
         <div className="flex size-12 shrink-0 items-center justify-start text-text-main">
-          <ArrowLeftIcon className="w-7 h-7" />
+          <ArrowLeftIcon className="w-7 h-7 cursor-pointer text-[#4F2712]"
+          onClick={() => router.back()} />
         </div>
 
         <h1 className="text-text-main text-lg font-bold flex-1 text-center text-[#4F2712]">
@@ -172,13 +176,13 @@ export default function FinancasPage() {
             <div>
               <h3 className="font-semibold text-text-main text-[#4F2712]">Declaração Anual 2024</h3>
               <p className="text-sm text-text-main/70 mb-3">Status: Pendente</p>
-
-              <button className="flex w-full h-12 items-center justify-center gap-2 rounded-lg bg-[#B95760] px-5 text-white font-semibold ">
-                <PencilSquareIcon className="w-6 h-6" />
-                Iniciar Pré-preenchimento
-              </button>
-            </div>
-
+            <Link href="/financas/preenchimento-mei">
+                  <button className="flex w-full h-12 items-center justify-center gap-2 rounded-lg bg-[#B95760] px-5 text-white font-semibold">
+                    <PencilSquareIcon className="w-6 h-6" />
+                    Iniciar Pré-preenchimento
+                  </button>
+                </Link>
+           </div>
             <hr className="border-text-main/10" />
 
             <div>

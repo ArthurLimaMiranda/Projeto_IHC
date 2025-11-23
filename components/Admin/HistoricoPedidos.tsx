@@ -1,127 +1,346 @@
-import React from "react";
+"use client";
+import React, { useEffect, useRef, useState } from "react";
 import Image from "next/image";
-import { ArrowLeftIcon, MagnifyingGlassIcon, ChevronRightIcon, CheckCircleIcon, ChevronDownIcon } from "@heroicons/react/24/outline";
+import Link from "next/link";
+import { motion, AnimatePresence } from "framer-motion";
+
+import {
+  ArrowLeftIcon,
+  ChevronRightIcon,
+  CheckCircleIcon,
+  ChevronDownIcon,
+  QuestionMarkCircleIcon,
+} from "@heroicons/react/24/outline";
+
+import { useRouter } from "next/navigation";
+import MenuInferior from "./MenuInferior";
 
 export default function HistoricoPedidosPage() {
+  const router = useRouter();
+
+  // --------------------------------------------------------
+  // MOCK DATA
+  // --------------------------------------------------------
+
+  const allOrders = [
+    { id: 1020, client: "João", deliveryDate: "20/12/23", price: 150.0, description: "Bolo grande com recheio de chocolate", image: "https://picsum.photos/200?4", status: "em-producao" },
+    { id: 1021, client: "Maria", deliveryDate: "18/12/23", price: 230.0, description: "50 cupcakes personalizados", image: "https://picsum.photos/200?5", status: "concluido" },
+    { id: 1022, client: "Ana", deliveryDate: "15/12/23", price: 90.0, description: "Kit festa simples", image: "https://picsum.photos/200?6", status: "entregue" },
+
+    { id: 1023, client: "Ricardo", deliveryDate: "12/12/23", price: 180.0, description: "Mini kit festa", image: "https://picsum.photos/200?7", status: "concluido" },
+    { id: 1024, client: "Bruna", deliveryDate: "10/12/23", price: 260.0, description: "Bolo 3 andares", image: "https://picsum.photos/200?8", status: "entregue" },
+    { id: 1025, client: "Clara", deliveryDate: "08/12/23", price: 110.0, description: "Bolo simples", image: "https://picsum.photos/200?9", status: "entregue" },
+  ];
+
+  const pendingDeliveries = allOrders
+  .filter(order => order.status !== "concluido" && order.status !== "entregue")
+  .map(order => ({
+    id: order.id,
+    title: order.description,
+    date: order.deliveryDate,
+    image: order.image
+  }));
+
+  // --------------------------------------------------------
+  // PENDINGS CAROUSEL (horizontal) - similar to Avaliacoes
+  // --------------------------------------------------------
+  const pendRef = useRef(null);
+  const [pendWidth, setPendWidth] = useState(0);
+  const [pendIndex, setPendIndex] = useState(0);
+
+  useEffect(() => {
+    // calcula limite de drag horizontal
+    if (pendRef.current) {
+      // @ts-ignore
+      setPendWidth(pendRef.current.scrollWidth - pendRef.current.offsetWidth);
+    }
+    // recompute on resize
+    const onResize = () => {
+      if (pendRef.current) {
+        // @ts-ignore
+        setPendWidth(pendRef.current.scrollWidth - pendRef.current.offsetWidth);
+      }
+    };
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
+
+  const PEND_ITEM_WIDTH = 304; // largura estimada (min-w + margin)
+
+  const pendGetX = () => -pendIndex * PEND_ITEM_WIDTH;
+
+  const handlePendDragEnd = (e, info) => {
+    const threshold = 80;
+    if (info.offset.x > threshold) {
+      // swipe direito -> anterior
+      setPendIndex((prev) => (prev === 0 ? pendingDeliveries.length - 1 : prev - 1));
+    } else if (info.offset.x < -threshold) {
+      // swipe esquerdo -> próximo
+      setPendIndex((prev) => (prev + 1) % pendingDeliveries.length);
+    }
+  };
+
+  const goToPend = (i) => setPendIndex(i);
+  const pendPrev = () => setPendIndex((p) => (p === 0 ? pendingDeliveries.length - 1 : p - 1));
+  const pendNext = () => setPendIndex((p) => (p + 1) % pendingDeliveries.length);
+
+  // --------------------------------------------------------
+  // TODOS OS PEDIDOS - vertical pagination (4 por página)
+  // --------------------------------------------------------
+  const ITEMS_PER_PAGE = 3;
+  const totalPages = Math.max(1, Math.ceil(allOrders.length / ITEMS_PER_PAGE));
+
+  const [page, setPage] = useState(0);
+  const [direction, setDirection] = useState(0);
+
+  const paginate = (newDirection) => {
+    setDirection(newDirection);
+    setPage((prev) => Math.min(Math.max(prev + newDirection, 0), totalPages - 1));
+  };
+
+  const currentItems = allOrders.slice(
+    page * ITEMS_PER_PAGE,
+    page * ITEMS_PER_PAGE + ITEMS_PER_PAGE
+  );
+
+  // variants para slide vertical
+  const variants = {
+    enter: (dir) => ({ y: dir > 0 ? 300 : -300, opacity: 0 }),
+    center: { y: 0, opacity: 1 },
+    exit: (dir) => ({ y: dir > 0 ? -300 : 300, opacity: 0 }),
+  };
+
+  // --------------------------------------------------------
   return (
-    <div className="relative flex h-auto min-h-screen w-full flex-col bg-brand-cream overflow-x-hidden">
-      {/* Top Bar */}
-      <header className="sticky top-0 z-10 flex items-center bg-brand-cream/80 p-4 pb-2 justify-between backdrop-blur-sm">
-        <div className="flex size-12 shrink-0 items-center justify-start">
-          <ArrowLeftIcon className="w-6 h-6 text-brand-brown" />
+    <div className="relative flex h-auto min-h-screen w-full flex-col bg-[#FFFFF4] overflow-hidden">
+      {/* TOP BAR */}
+      <header className="flex items-center bg-[#EEEDDF] p-4 pb-2 justify-between sticky top-0 z-10">
+        <div className="flex size-12 shrink-0 items-center justify-start text-text-main">
+          <ArrowLeftIcon
+            className="w-7 h-7 cursor-pointer text-[#4F2712]"
+            onClick={() => router.back()}
+          />
         </div>
-        <h1 className="text-brand-brown text-xl font-bold flex-1 text-center">
+
+        <h1 className="text-text-main text-lg font-bold flex-1 text-center text-[#4F2712]">
           Histórico de Pedidos
         </h1>
+
         <div className="flex w-12 items-center justify-end">
-          <button className="flex h-10 w-10 items-center justify-center rounded-full hover:bg-brand-brown/10">
-            <MagnifyingGlassIcon className="w-6 h-6 text-brand-brown" />
+          <button className="flex h-10 w-10 items-center justify-center rounded-full bg-transparent text-text-main">
+            <QuestionMarkCircleIcon className="w-7 h-7" />
           </button>
         </div>
       </header>
 
-      {/* Entregas Pendentes */}
-      <h2 className="text-brand-brown text-lg font-bold px-4 pb-2 pt-4">
-        Entregas Pendentes
+      {/* --------------------------------------------------------
+         ENTREGAS PENDENTES — CARROSSEL HORIZONTAL (drag + arrows + dots)
+      --------------------------------------------------------- */}
+      <h2 className="text-lg font-bold px-4 pb-2 pt-6 text-[#4F2712]">
+        Próximas Entregas
       </h2>
 
-      <div className="flex overflow-x-auto scrollbar-hide pb-4">
-        <div className="flex items-stretch px-4 gap-3">
-          {/* Carousel Item */}
-          {[
-            {
-              id: 1024,
-              title: "Bolo de Casamento",
-              date: "25/12/23",
-              image:
-                "https://lh3.googleusercontent.com/aida-public/AB6AXuBff8rrlcYOt2zQ7bpFJWZkjlYLArW9QAs0cASC9crW_RhCOPvjQPNmF9mQ_vKT8DAWmnoo8QQ0yNl2jRkzg-KG7U73zBnbUfmxb9bkh9ZbrEgUtHE1vSMBpn-wL8iqzvJt4w8FcUE_fGloFR0oDHo-k1a7brwmnyTJxeO_aiPOLIPFz3yT77gKkaT5oTZRB-LvXavqQg7GEnErOrbVwZ5TuNVbe9gPY2TDYLjsc_CCPCy37t42kgDQD1inEHJx_O5wTceHPDdnZlo",
-            },
-            {
-              id: 1023,
-              title: "Bolo de Chocolate + Kit",
-              date: "24/12/23",
-              image:
-                "https://lh3.googleusercontent.com/aida-public/AB6AXuDpufPD_bXfOzt5TC_23vvSx7qVRX7a1L-5hiIMtrgYEA0qTOjFwTYtqUtvsVW9Zbo-7u5fsWLe7KttzMQ3GMr8K8foTRPXxR144ql3U-ADfg2gaBsEsJTSso35TORkmtxtjC0kYaZp1Mbjrip3mGHaTnzQw9uF1nqpI_4POqahCekz7ZLL7cNWovy1rOSQ1g1xtOv_P36_JtpJSWKxpDPPczQCq8e-OuNdtAPg8wD4OBCR8H8QPH765KeUwdzPfMGRFQX86vJ6070",
-            },
-            {
-              id: 1022,
-              title: "50 Docinhos Variados",
-              date: "23/12/23",
-              image:
-                "https://lh3.googleusercontent.com/aida-public/AB6AXuB4CyG_HnIdfGyujAFojUowqzPx9Xt1n-uQ2oChOk5wemtxLiRKSY3LVx7d28zxtu9B-ONikr8M-j08V2edrfa45gTkkkGqJLupiqPWz_whANDI28K4ZSvaxLWgQXXpiSubSzCcutLeT96oaXWc44KzK3Gf3lHPAJtABbig9q-xu4uoBzniWNjufRSqdabEnWWZ7ar0HWX-WEw2DkQU4_QVIniN9pkAVO7Mf4dExZScqnrRPIsJp18Fw0BHhf8cwWDmMdpUBMBvOzY",
-            },
-          ].map((item) => (
-            <div
-              key={item.id}
-              className="flex flex-col gap-3 rounded-lg bg-white p-3 shadow-sm min-w-52 border border-brand-rose/50"
+      <div className="px-4">
+        <div className="relative">
+          {/* arrows */}
+          <div className="absolute left-0 top-1/2 -translate-y-1/2 z-20">
+            <button
+              onClick={pendPrev}
+              className="bg-white shadow-md p-2 rounded-full -ml-1"
+              aria-label="Anterior"
             >
-              <div className="w-full aspect-video rounded-lg overflow-hidden bg-cover bg-center" style={{ backgroundImage: `url(${item.image})` }} />
+              <svg className="w-5 h-5 text-[#4F2712]" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <path d="M15 19l-7-7 7-7" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </button>
+          </div>
 
-              <div>
-                <p className="text-brand-brown text-base font-bold">Pedido #{item.id}</p>
-                <p className="text-brand-brown/70 text-sm">{item.title}</p>
-                <p className="text-brand-rose text-sm font-bold mt-1">
-                  Entrega: {item.date}
-                </p>
-              </div>
+          <div className="absolute right-0 top-1/2 -translate-y-1/2 z-20">
+            <button
+              onClick={pendNext}
+              className="bg-white shadow-md p-2 rounded-full -mr-1"
+              aria-label="Próximo"
+            >
+              <svg className="w-5 h-5 text-[#4F2712]" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <path d="M9 5l7 7-7 7" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </button>
+          </div>
+
+          {/* carrossel */}
+          <motion.div
+            className="cursor-grab overflow-hidden"
+            whileTap={{ cursor: "grabbing" }}
+            ref={pendRef}
+          >
+            <motion.div
+              className="flex items-stretch py-3"
+              drag="x"
+              dragConstraints={{ right: 0, left: -pendWidth }}
+              onDragEnd={handlePendDragEnd}
+              animate={{ x: pendGetX() }}
+              transition={{ type: "spring", stiffness: 300, damping: 30 }}
+            >
+              {pendingDeliveries.map((item, idx) => (
+                <div
+                  key={item.id}
+                  className="min-w-[280px] max-w-[280px] mx-3 flex-shrink-0"
+                >
+                  <div className="flex flex-col gap-3 rounded-lg bg-white p-3 shadow-sm border border-[#B95760]">
+                    <div
+                      className="w-full aspect-video rounded-lg overflow-hidden bg-cover bg-center"
+                      style={{ backgroundImage: `url(${item.image})` }}
+                    />
+                    <div>
+                      <p className="text-brand-brown text-base font-bold">Pedido #{item.id}</p>
+                      <p className="text-brand-brown/70 text-sm">{item.title}</p>
+                      <p className="text-brand-rose text-sm font-bold mt-1">Entrega: {item.date}</p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </motion.div>
+          </motion.div>
+
+          {/* dots */}
+          <div className="flex justify-center mt-3">
+            <div className="flex gap-2">
+              {pendingDeliveries.map((_, i) => (
+                <button
+                  key={i}
+                  onClick={() => goToPend(i)}
+                  aria-label={`Ir para slide ${i + 1}`}
+                  className={`h-2 rounded-full transition-all ${i === pendIndex ? "w-6 bg-[#B95760]" : "w-2 bg-[#D9D9D9]"}`}
+                />
+              ))}
             </div>
-          ))}
+          </div>
         </div>
       </div>
-
-      {/* Todos os Pedidos */}
-      <h2 className="text-brand-brown text-lg font-bold px-4 pb-2 pt-4">
+      {/* --------------------------------------------------------
+        TODOS OS PEDIDOS — LISTA VERTICAL PAGINADA (slide vertical)
+      --------------------------------------------------------- */}
+      <h2 className="text-[#4F2712] text-lg font-bold px-4 pb-2 pt-4">
         Todos os Pedidos
       </h2>
 
-      <div className="flex flex-col px-4 gap-3 pb-24">
-        {/* Pedido Template */}
-        {[1, 2, 3].map((_, i) => (
-          <div key={i} className="flex flex-col gap-3 bg-white p-3 rounded-xl shadow-sm hover:bg-gray-50">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <div
-                  className="size-16 rounded-lg bg-cover bg-center"
-                  style={{ backgroundImage: `url(https://picsum.photos/200?${i})` }}
-                />
-                <div className="flex flex-1 flex-col">
-                  <p className="text-brand-brown text-base font-bold">#10{i + 20} - Cliente</p>
-                  <p className="text-brand-brown/70 text-sm">Entrega: 20/12/23 - R$ 150,00</p>
-                  <p className="text-brand-brown/70 text-sm truncate max-w-48">Descrição do pedido</p>
+      <div className="relative h-[520px] overflow-hidden px-4">
+        {/* CONTAINER ANIMADO */}
+        <AnimatePresence initial={false} custom={direction}>
+          <motion.div
+            key={page}
+            custom={direction}
+            variants={variants}
+            initial="enter"
+            animate="center"
+            exit="exit"
+            transition={{ duration: 0.35 }}
+            drag="y"
+            dragConstraints={{ top: 0, bottom: 0 }}
+            onDragEnd={(e, info) => {
+              if (info.offset.y < -120) paginate(1);     // arrastou para cima → próxima página
+              else if (info.offset.y > 120) paginate(-1); // arrastou para baixo → volta página
+            }}
+            className="absolute top-0 left-0 w-full"
+          >
+            <div className="flex flex-col gap-3 pb-16 p-4">
+              {currentItems.map((order) => (
+                <div key={order.id} className="flex flex-col gap-3 bg-white p-3 rounded-xl shadow-md">
+                  <div className="flex items-center justify-between ">
+                    <div className="flex items-center gap-4">
+                      <div
+                        className="size-16 rounded-lg bg-cover bg-center"
+                        style={{ backgroundImage: `url(${order.image})` }}
+                      />
+                      <div className="flex flex-col">
+                        <p className="text-[#B95760] text-base font-bold">
+                          #{order.id} - {order.client}
+                        </p>
+                        <p className="text-brand-brown/70 text-sm">
+                          Entrega: {order.deliveryDate} - R$ {order.price}
+                        </p>
+                        <p className="text-brand-brown/70 text-sm truncate max-w-48">
+                          {order.description}
+                        </p>
+                      </div>
+                    </div>
+
+                    <ChevronRightIcon className="w-5 h-5 text-brand-brown/50" />
+                  </div>
+
+                  {/* STATUS */}
+                  <div className="flex items-center justify-between pt-2 pl-4 border-t border-brand-brown/10">
+                    <p className="text-sm text-brand-brown/80">Status:</p>
+
+                    {order.status === "em-producao" && (
+                      <button className="flex items-center gap-2 rounded-full bg-brand-teal px-3 py-1 text-sm font-medium text-white">
+                        Em Produção <ChevronDownIcon className="w-4 h-4" />
+                      </button>
+                    )}
+
+                    {order.status === "concluido" && (
+                      <button className="flex items-center gap-2 rounded-full bg-brand-light-blue px-3 py-1 text-sm font-medium text-brand-brown">
+                        Concluído <ChevronDownIcon className="w-4 h-4" />
+                      </button>
+                    )}
+
+                    {order.status === "entregue" && (
+                      <div className="flex items-center gap-2 rounded-full bg-brand-brown/10 px-3 py-1 text-sm font-medium text-brand-brown">
+                        <CheckCircleIcon className="w-4 h-4" /> Entregue
+                      </div>
+                    )}
+                  </div>
                 </div>
-              </div>
-              <ChevronRightIcon className="w-5 h-5 text-brand-brown/50" />
+              ))}
             </div>
+          </motion.div>
+        </AnimatePresence>
+      </div>
 
-            <div className="flex items-center justify-between pt-2 border-t border-brand-brown/10">
-              <p className="text-sm text-brand-brown/80">Status:</p>
+    {/* PAGINADOR FIXO — SEMPRE VISÍVEL */}
+    <div className="flex items-center justify-center gap-4 mb-20">
+      <button
+        className="px-3 py-1 text-lg font-bold text-brand-brown disabled:opacity-30 bg-white rounded-md shadow-sm"
+        onClick={() => paginate(-1)}
+        disabled={page === 0}
+        aria-label="Página anterior"
+      >
+        {"<"}
+      </button>
 
-              {i === 0 && (
-                <button className="flex items-center gap-2 rounded-full bg-brand-teal px-3 py-1 text-sm font-medium text-white">
-                  Em Produção <ChevronDownIcon className="w-4 h-4" />
-                </button>
-              )}
-
-              {i === 1 && (
-                <button className="flex items-center gap-2 rounded-full bg-brand-light-blue px-3 py-1 text-sm font-medium text-brand-brown">
-                  Concluído <ChevronDownIcon className="w-4 h-4" />
-                </button>
-              )}
-
-              {i === 2 && (
-                <div className="flex items-center gap-2 rounded-full bg-brand-brown/10 px-3 py-1 text-sm font-medium text-brand-brown">
-                  <CheckCircleIcon className="w-4 h-4" /> Entregue
-                </div>
-              )}
-            </div>
-          </div>
+      <div className="flex gap-2">
+        {Array.from({ length: totalPages }).map((_, i) => (
+          <button
+            key={i}
+            onClick={() => {
+              setDirection(i > page ? 1 : -1);
+              setPage(i);
+            }}
+            aria-label={`Ir para página ${i + 1}`}
+            className={`h-2 rounded-full transition-all ${
+              i === page ? "w-6 bg-[#B95760]" : "w-2 bg-[#D9D9D9]"
+            }`}
+          />
         ))}
       </div>
+
+      <button
+        className="px-3 py-1 text-lg font-bold text-brand-brown disabled:opacity-30 bg-white rounded-md shadow-sm"
+        onClick={() => paginate(1)}
+        disabled={page === totalPages - 1}
+        aria-label="Próxima página"
+      >
+        {">"}
+      </button>
+    </div>
+
 
       {/* FAB */}
       <button className="fixed bottom-6 right-6 flex h-16 w-16 items-center justify-center rounded-full bg-brand-rose text-white shadow-lg hover:scale-105 transition-transform">
         +
       </button>
+
+      <MenuInferior />
     </div>
   );
 }

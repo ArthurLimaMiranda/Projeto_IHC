@@ -1,5 +1,4 @@
 "use client";
-
 import React, { useState } from "react";
 import {
   ArrowLeftIcon,
@@ -15,7 +14,10 @@ import {
   HomeModernIcon,
   UsersIcon,
   FolderIcon,
+  QuestionMarkCircleIcon,
 } from "@heroicons/react/24/outline";
+import MenuInferior from "./MenuInferior";
+import { useRouter } from "next/navigation";
 
 // Categorias convertidas para Heroicons
 const categories = [
@@ -32,16 +34,28 @@ const subcategories = ["Farinhas", "Laticínios", "Açúcares", "Frutas"];
 const paymentTypes = ["Cartão de Crédito", "Cartão de Débito", "PIX", "Dinheiro"];
 
 export default function RegistroDespesa() {
+    const router = useRouter();
   const [selectedCategory, setSelectedCategory] = useState("Ingredientes");
 
   return (
     <div className="relative flex min-h-screen w-full flex-col overflow-x-hidden bg-background-light text-content-light">
-      {/* Header */}
-      <div className="flex items-center bg-background-light p-4 pb-2 justify-between sticky top-0 z-10">
-        <ArrowLeftIcon className="w-7 h-7 cursor-pointer" />
-        <h2 className="text-lg font-bold flex-1 text-center">Registrar Despesa</h2>
-        <div className="w-6"></div>
-      </div>
+      {/* Top App Bar */}
+      <header className="flex items-center bg-[#EEEDDF] p-4 pb-2 justify-between sticky top-0 z-10">
+        <div className="flex size-12 shrink-0 items-center justify-start text-text-main">
+          <ArrowLeftIcon className="w-7 h-7 cursor-pointer text-[#4F2712]"
+          onClick={() => router.back()} />
+        </div>
+
+        <h1 className="text-text-main text-lg font-bold flex-1 text-center text-[#4F2712]">
+          Registrar Despesa
+        </h1>
+
+        <div className="flex w-12 items-center justify-end">
+          <button className="flex h-10 w-10 items-center justify-center rounded-full bg-transparent text-text-main">
+            <QuestionMarkCircleIcon className="w-7 h-7" />
+          </button>
+        </div>
+      </header>
 
       <main className="flex-1 px-4 py-3 flex flex-col gap-6">
         <h1 className="text-[32px] font-bold pt-2 pb-1">Qual é o valor?</h1>
@@ -161,6 +175,7 @@ export default function RegistroDespesa() {
           </button>
         </div>
       </div>
+      <MenuInferior />
     </div>
   );
 }

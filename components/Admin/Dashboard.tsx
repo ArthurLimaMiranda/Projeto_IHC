@@ -104,7 +104,7 @@ export default function Dashboard() {
     <div className="grid grid-cols-2 gap-4 p-6">
     {/* Botão 1 */}
     <Link
-      href="/registrodespesa"
+      href="/financas/despesas"
       className="flex bg-[#34A7B2] flex-col items-center justify-center gap-2 rounded-xl p-4 text-white text-center shadow-sm transition-transform hover:scale-105"
     >
       <BanknotesIcon className="h-6 w-6 text-white" />
@@ -113,7 +113,7 @@ export default function Dashboard() {
 
     {/* Botão 2 */}
     <Link
-      href="/dashboard-financeiro"
+      href="/financas/relatorio"
       className="flex bg-[#B95760] flex-col items-center justify-center gap-2 rounded-xl p-4 text-white text-center shadow-sm transition-transform hover:scale-105"
     >
       <DocumentChartBarIcon className="h-6 w-6 text-white" />
@@ -132,7 +132,7 @@ export default function Dashboard() {
 
     {/* Botão 4 */}
     <Link
-      href="/agenda"
+      href="/historico-pedidos/agenda"
       className="flex bg-[#34A7B2] flex-col items-center justify-center gap-2 rounded-xl p-4 text-white text-center shadow-sm transition-transform hover:scale-105"
     >
       <CalendarIcon className="h-6 w-6 text-white" />
@@ -148,7 +148,7 @@ export default function Dashboard() {
         </h2>
         <Link
           className="text-sm font-bold text-[#34A7B2] hover:underline"
-          href="#"
+          href="/historico-pedidos"
         >
           Ver todos
         </Link>

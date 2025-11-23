@@ -1,22 +1,28 @@
 "use client"
 
 import { useState } from "react";
-import { Bars3Icon, BellIcon, CalendarIcon, PlusIcon } from "@heroicons/react/24/outline";
+import { ArrowLeftIcon, Bars3Icon, BellIcon, CalendarIcon, PlusIcon, QuestionMarkCircleIcon } from "@heroicons/react/24/outline";
+import { useRouter } from "next/navigation";
+import MenuInferior from "./MenuInferior";
 
 export default function DashboardFinanceiro() {
+  const router = useRouter();
   return (
-    <div className="min-h-screen bg-background-light text-primary">
+    <div className="min-h-screen bg-[#FFFFF4] text-primary">
       {/* Header */}
-      <header className="sticky top-0 z-10 bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-sm border-b border-primary/10 dark:border-white/10">
-        <div className="flex items-center p-4 pb-2 justify-between">
-          <button className="h-10 w-10 flex items-center justify-center rounded-full text-primary dark:text-gray-200">
-            <Bars3Icon className="w-6 h-6" />
-          </button>
+      <header className="flex items-center bg-[#EEEDDF] p-4 pb-2 justify-between sticky top-0 z-10">
+        <div className="flex size-12 shrink-0 items-center justify-start text-text-main">
+          <ArrowLeftIcon className="w-7 h-7 cursor-pointer text-[#4F2712]"
+          onClick={() => router.back()} />
+        </div>
 
-          <h1 className="text-lg font-bold flex-1 text-center">Resumo Financeiro</h1>
+        <h1 className="text-text-main text-lg font-bold flex-1 text-center text-[#4F2712]">
+          Resumo Financeiro
+        </h1>
 
-          <button className="h-10 w-10 flex items-center justify-center rounded-full text-primary dark:text-gray-200">
-            <BellIcon className="w-6 h-6" />
+        <div className="flex w-12 items-center justify-end">
+          <button className="flex h-10 w-10 items-center justify-center rounded-full bg-transparent text-text-main">
+            <QuestionMarkCircleIcon className="w-7 h-7" />
           </button>
         </div>
       </header>
@@ -24,7 +30,7 @@ export default function DashboardFinanceiro() {
       {/* Main */}
       <main className="pb-24">
         {/* Filtros */}
-        <div className="p-4 pt-2">
+        <div className="p-4 pt-4">
           <div className="flex gap-2 overflow-x-auto pb-2 -mx-4 px-4">
             {[
               "Este Mês",
@@ -36,8 +42,8 @@ export default function DashboardFinanceiro() {
                 key={i}
                 className={`flex h-9 items-center justify-center gap-x-2 rounded-full px-4 pr-3 shrink-0 text-sm font-medium ${
                   i === 0
-                    ? "bg-primary text-white"
-                    : "bg-primary/10 dark:bg-white/10 text-primary dark:text-gray-300"
+                    ? "bg-[#4F2712] text-white"
+                    : "bg-[#EEEDDF] text-[#4F2712]"
                 }`}
               >
                 {label}
@@ -57,7 +63,7 @@ export default function DashboardFinanceiro() {
         </div>
 
         {/* Gráfico Receitas vs Despesas */}
-        <section className="flex flex-col gap-4 border rounded-xl mx-4 p-5 bg-white dark:bg-background-dark/20 border-primary/10 dark:border-white/10">
+        <section className="flex flex-col gap-4 border rounded-xl mx-4 p-5 bg-white border-[#B95760] ">
           <div className="flex items-center justify-between">
             <p className="font-bold">Receitas vs. Despesas</p>
             <div className="flex gap-4 text-xs">
@@ -96,7 +102,7 @@ export default function DashboardFinanceiro() {
 // Componentes auxiliares
 function ResumoCard({ titulo, valor, variacao, variacaoColor, full }: any) {
   return (
-    <div className={`flex flex-col gap-2 rounded-xl shadow-sm p-5 bg-white dark:bg-background-dark/20 ${full ? "w-full" : "flex-1 min-w-[158px]"}`}>
+    <div className={`flex flex-col gap-2 rounded-xl shadow-sm p-5 bg-white border-[#B95760] ${full ? "w-full" : "flex-1 min-w-[158px]"}`}>
       <p className="text-primary/80 dark:text-gray-300 text-base font-medium">{titulo}</p>
       <p className="text-2xl font-bold text-primary dark:text-gray-100">{valor}</p>
       <p className={`text-base font-medium ${variacaoColor}`}>{variacao}</p>
@@ -180,6 +186,7 @@ function GraficoLinha() {
         <p>Sem 3</p>
         <p>Sem 4</p>
       </div>
+      <MenuInferior />
     </div>
   );
 }
