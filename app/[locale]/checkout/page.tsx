@@ -3,7 +3,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowLeftIcon, ShoppingCartIcon } from '@heroicons/react/24/outline';
+import { ArrowLeftIcon, ShoppingCartIcon, ChevronDownIcon, ChevronUpIcon } from '@heroicons/react/24/outline';
 import { Header } from '@/components/Client/Header';
 import { useCart } from '@/contexts/CartContext';
 
@@ -16,6 +16,19 @@ const calculateEstimatedDelivery = () => {
   return estimatedDelivery.toISOString();
 };
 
+const createDefaultTimeline = () => [
+  {
+    status: 'PENDING',
+    timestamp: new Date().toISOString(),
+    description: 'Pedido recebido e confirmado'
+  },
+  {
+    status: 'PREPARING',
+    timestamp: new Date(Date.now() + 30 * 60 * 1000).toISOString(), // 30 minutos depois
+    description: 'Iniciando preparação dos ingredientes'
+  }
+];
+
 export default function CheckoutPage() {
   const router = useRouter();
   const { cartItems, getCartTotal, clearCart } = useCart();
@@ -26,6 +39,8 @@ export default function CheckoutPage() {
     paymentMethod: 'pix' as 'pix' | 'credit-card' | 'cash',
     notes: '',
   });
+  const [expandedItems, setExpandedItems] = useState<number[]>([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const deliveryFee = 8.00;
   const subtotal = getCartTotal();
@@ -44,56 +59,100 @@ export default function CheckoutPage() {
     setFormData(prev => ({ ...prev, paymentMethod: method }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const toggleItemDetails = (itemId: number) => {
+    setExpandedItems(prev =>
+      prev.includes(itemId)
+        ? prev.filter(id => id !== itemId)
+        : [...prev, itemId]
+    );
+  };
+
+  const hasCustomizations = (item: any) => {
+    return (
+      (item.customization?.toppings && item.customization.toppings.length > 0) ||
+      (item.customization?.addOns && item.customization.addOns.length > 0) ||
+      (item.customization?.extras && item.customization.extras.length > 0)
+    );
+  };
+
+  const formatPhoneForStorage = (phone: string) => {
+    // Remove tudo que não é número
+    return phone.replace(/\D/g, '');
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    if (isSubmitting) return;
+    
+    setIsSubmitting(true);
+
     // Validar campos obrigatórios
     if (!formData.name || !formData.address || !formData.phone) {
       alert('Por favor, preencha todos os campos obrigatórios!');
+      setIsSubmitting(false);
       return;
     }
 
     if (cartItems.length === 0) {
       alert('Seu carrinho está vazio!');
+      setIsSubmitting(false);
       return;
     }
 
-    // Criar objeto do pedido
-    const order = {
-      id: 'JUJU' + Date.now().toString().slice(-6),
-      customer: formData,
-      items: cartItems,
-      subtotal,
-      deliveryFee,
-      discount: pixDiscount,
-      total: finalTotal,
-      paymentMethod: formData.paymentMethod,
-      orderDate: new Date().toISOString(),
-      estimatedDelivery: calculateEstimatedDelivery(),
-      status: 'PENDING',
-      timeline: [
-        {
-          status: 'PENDING',
-          timestamp: new Date().toISOString(),
-          description: 'Pedido recebido'
-        }
-      ]
-    };
+    try {
+      // Formatar telefone para armazenamento consistente
+      const formattedPhone = formatPhoneForStorage(formData.phone);
 
-    // Salvar pedido no localStorage
-    const existingOrders = JSON.parse(localStorage.getItem('juju-orders') || '[]');
-    existingOrders.push(order);
-    localStorage.setItem('juju-orders', JSON.stringify(existingOrders));
+      // Criar objeto do pedido
+      const order = {
+        id: 'JUJU' + Date.now().toString().slice(-8),
+        customer: {
+          ...formData,
+          phone: formattedPhone, // Salvar telefone formatado
+        },
+        items: cartItems.map(item => ({
+          ...item,
+          id: item.id || Date.now() + Math.random(), // Garantir ID único
+        })),
+        subtotal,
+        deliveryFee,
+        discount: pixDiscount,
+        total: finalTotal,
+        paymentMethod: formData.paymentMethod,
+        orderDate: new Date().toISOString(),
+        estimatedDelivery: calculateEstimatedDelivery(),
+        status: 'PENDING',
+        timeline: createDefaultTimeline()
+      };
 
-    // Limpar carrinho
-    clearCart();
+      // Salvar pedido no localStorage
+      const existingOrders = JSON.parse(localStorage.getItem('juju-orders') || '[]');
+      
+      // Verificar se já existe um pedido com o mesmo ID (muito improvável, mas seguro)
+      const orderExists = existingOrders.some((existingOrder: any) => existingOrder.id === order.id);
+      if (!orderExists) {
+        existingOrders.push(order);
+        localStorage.setItem('juju-orders', JSON.stringify(existingOrders));
+        console.log('Pedido salvo:', order);
+      }
 
-    // Redirecionar para confirmação, passando o ID do pedido
-    router.push(`/order-confirmation?orderId=${order.id}`);
+      // Limpar carrinho
+      clearCart();
+
+      // Redirecionar para confirmação, passando o ID do pedido
+      router.push(`/order-confirmation?orderId=${order.id}`);
+      
+    } catch (error) {
+      console.error('Erro ao processar pedido:', error);
+      alert('Erro ao processar seu pedido. Por favor, tente novamente.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
-    <div className="min-h-screen bg-rose-50">
+    <div className="min-h-screen bg-[#FFFFF4]">
       <Header />
 
       <main className="container mx-auto max-w-md p-4 space-y-6 pb-32">
@@ -148,8 +207,13 @@ export default function CheckoutPage() {
                   onChange={handleInputChange}
                   required
                   className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-rose-500 focus:border-transparent"
-                  placeholder="(XX) XXXXX-XXXX"
+                  placeholder="(11) 99999-9999"
+                  pattern="[0-9\s\-\(\)]+"
+                  title="Digite um número de telefone válido"
                 />
+                <p className="text-xs text-gray-500 mt-1">
+                  Este número será usado para rastrear seu pedido
+                </p>
               </div>
 
               <div>
@@ -172,51 +236,136 @@ export default function CheckoutPage() {
           {/* Resumo do Pedido */}
           <section>
             <h3 className="text-lg font-bold mb-3 text-gray-700">Resumo do Pedido</h3>
-            <div className="bg-white p-4 rounded-lg shadow space-y-3">
-              {cartItems.map((item) => (
-                <div key={item.id} className="flex justify-between text-gray-700">
-                  <div className="flex-1">
-                    <div className="font-medium">{item.name}</div>
-                    <div className="text-sm text-gray-500">
-                      {item.quantity}x R$ {item.price.toFixed(2)}
-                      {item.customization && (
-                        <div className="mt-1 text-xs">
-                          <div><strong>Sabor:</strong> {item.customization.flavor}</div>
-                          {item.customization.frosting && item.customization.frosting !== 'Nenhuma' && (
-                            <div><strong>Cobertura:</strong> {item.customization.frosting}</div>
-                          )}
+            <div className="bg-white p-4 rounded-lg shadow space-y-4">
+              {cartItems.map((item) => {
+                const isExpanded = expandedItems.includes(item.id);
+                const hasMoreDetails = hasCustomizations(item);
+                
+                return (
+                  <div key={item.id} className="pb-3 border-b border-gray-100 last:border-b-0 last:pb-0">
+                    <div className="flex gap-3">
+                      {/* Imagem do bolo */}
+                      <div className="flex-shrink-0">
+                        <img
+                          src={item.image}
+                          alt={item.name}
+                          className="w-16 h-16 rounded-lg object-cover border border-gray-200"
+                        />
+                      </div>
+                      
+                      {/* Informações do item */}
+                      <div className="flex-1 min-w-0">
+                        {/* Nome completo e preço */}
+                        <div className="flex justify-between items-start mb-1">
+                          <h4 className="font-semibold text-gray-800 text-sm leading-tight">
+                            {item.name}
+                          </h4>
+                          <span className="text-rose-600 font-bold text-sm whitespace-nowrap ml-2">
+                            R$ {(item.price * item.quantity).toFixed(2)}
+                          </span>
                         </div>
-                      )}
+                        
+                        {/* Quantidade */}
+                        <div className="text-xs text-gray-500 mb-1">
+                          <span className="font-medium">Quantidade: {item.quantity}</span>
+                        </div>
+                        
+                        {/* Informações básicas sempre visíveis */}
+                        {item.customization && (
+                          <div className="text-xs text-gray-600 space-y-1">
+                            <div className="flex items-start gap-1">
+                              <span className="font-medium">Sabor:</span>
+                              <span>{item.customization.flavor}</span>
+                            </div>
+                            {item.customization.frosting && item.customization.frosting !== 'Nenhuma' && (
+                              <div className="flex items-start gap-1">
+                                <span className="font-medium">Cobertura:</span>
+                                <span>{item.customization.frosting}</span>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                        
+                        {/* Botão Ver Mais/Menos */}
+                        {hasMoreDetails && (
+                          <button
+                            type="button"
+                            onClick={() => toggleItemDetails(item.id)}
+                            className="flex items-center gap-1 text-rose-500 text-xs mt-2 hover:text-rose-600 transition-colors"
+                          >
+                            {isExpanded ? (
+                              <>
+                                <ChevronUpIcon className="h-3 w-3" />
+                                Ver menos
+                              </>
+                            ) : (
+                              <>
+                                <ChevronDownIcon className="h-3 w-3" />
+                                Ver mais detalhes
+                              </>
+                            )}
+                          </button>
+                        )}
+                      </div>
                     </div>
+                    
+                    {/* Detalhes expandidos */}
+                    {isExpanded && item.customization && (
+                      <div className="mt-3 pl-19 space-y-2">
+                        {/* Toppings */}
+                        {item.customization.toppings && item.customization.toppings.length > 0 && (
+                          <div className="text-xs text-gray-600">
+                            <span className="font-medium">Toppings: </span>
+                            <span>{item.customization.toppings.join(', ')}</span>
+                          </div>
+                        )}
+                        
+                        {/* Add-ons */}
+                        {item.customization.addOns && item.customization.addOns.length > 0 && (
+                          <div className="text-xs text-gray-600">
+                            <span className="font-medium">Add-ons: </span>
+                            <span>{item.customization.addOns.join(', ')}</span>
+                          </div>
+                        )}
+                        
+                        {/* Extras */}
+                        {item.customization.extras && item.customization.extras.length > 0 && (
+                          <div className="text-xs text-gray-600">
+                            <span className="font-medium">Extras: </span>
+                            <span>{item.customization.extras.join(', ')}</span>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
-                  <span className="font-semibold whitespace-nowrap ml-2">
-                    R$ {(item.price * item.quantity).toFixed(2)}
-                  </span>
+                );
+              })}
+              
+              {/* Resumo financeiro */}
+              <div className="space-y-2 pt-2 border-t border-gray-200">
+                <div className="flex justify-between text-gray-700">
+                  <span className="text-sm">Subtotal</span>
+                  <span className="text-sm font-medium">R$ {subtotal.toFixed(2)}</span>
                 </div>
-              ))}
-              
-              <div className="flex justify-between text-gray-700">
-                <span>Subtotal</span>
-                <span>R$ {subtotal.toFixed(2)}</span>
-              </div>
-              
-              <div className="flex justify-between text-gray-700">
-                <span>Taxa de Entrega</span>
-                <span>R$ {deliveryFee.toFixed(2)}</span>
-              </div>
+                
+                <div className="flex justify-between text-gray-700">
+                  <span className="text-sm">Taxa de Entrega</span>
+                  <span className="text-sm font-medium">R$ {deliveryFee.toFixed(2)}</span>
+                </div>
 
-              {formData.paymentMethod === 'pix' && (
-                <div className="flex justify-between text-green-600">
-                  <span>Desconto PIX (5%)</span>
-                  <span>- R$ {pixDiscount.toFixed(2)}</span>
+                {formData.paymentMethod === 'pix' && (
+                  <div className="flex justify-between text-green-600">
+                    <span className="text-sm">Desconto PIX (5%)</span>
+                    <span className="text-sm font-medium">- R$ {pixDiscount.toFixed(2)}</span>
+                  </div>
+                )}
+                
+                <div className="border-t border-gray-200 pt-2 mt-2" />
+                
+                <div className="flex justify-between font-bold text-base text-gray-800">
+                  <span>Total</span>
+                  <span>R$ {finalTotal.toFixed(2)}</span>
                 </div>
-              )}
-              
-              <div className="border-t border-gray-200 pt-2 mt-2" />
-              
-              <div className="flex justify-between font-bold text-lg text-gray-800">
-                <span>Total</span>
-                <span>R$ {finalTotal.toFixed(2)}</span>
               </div>
             </div>
           </section>
@@ -308,10 +457,20 @@ export default function CheckoutPage() {
           <button
             type="submit"
             onClick={handleSubmit}
-            className="w-full bg-rose-500 hover:bg-rose-600 text-white font-bold py-4 px-6 rounded-lg shadow-lg transition-colors flex items-center justify-center gap-2"
+            disabled={isSubmitting}
+            className="w-full bg-rose-500 hover:bg-rose-600 disabled:bg-rose-300 text-white font-bold py-4 px-6 rounded-lg shadow-lg transition-colors flex items-center justify-center gap-2 disabled:cursor-not-allowed"
           >
-            <ShoppingCartIcon className="h-5 w-5" />
-            Confirmar Pedido - R$ {finalTotal.toFixed(2)}
+            {isSubmitting ? (
+              <>
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                Processando...
+              </>
+            ) : (
+              <>
+                <ShoppingCartIcon className="h-5 w-5" />
+                Confirmar Pedido - R$ {finalTotal.toFixed(2)}
+              </>
+            )}
           </button>
         </div>
       </footer>

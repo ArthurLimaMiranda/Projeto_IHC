@@ -8,12 +8,12 @@ export function Categorias() {
 
   const categorias = [
     {
-      titulo: "Bolos",
+      titulo: "Produtos",
       imagem: "/assets/bolo.jpg",
       rota: "/products?category=Todos",
     },
     {
-      titulo: "Kits Personalizados",
+      titulo: "Kits",
       imagem: "/assets/salgados.jpg",
       rota: "/kits"
     },

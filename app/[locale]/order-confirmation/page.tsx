@@ -3,7 +3,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { CheckIcon, TruckIcon, ClockIcon, HomeIcon } from '@heroicons/react/24/solid';
+import { CheckIcon, TruckIcon, ClockIcon, HomeIcon, ChevronDownIcon, ChevronUpIcon } from '@heroicons/react/24/solid';
 import { Header } from '@/components/Client/Header';
 
 interface Order {
@@ -33,6 +33,7 @@ export default function OrderConfirmationPage() {
   const orderId = searchParams.get('orderId');
   const [order, setOrder] = useState<Order | null>(null);
   const [countdown, setCountdown] = useState('');
+  const [expandedItems, setExpandedItems] = useState<number[]>([]);
 
   useEffect(() => {
     if (orderId) {
@@ -73,6 +74,14 @@ export default function OrderConfirmationPage() {
     return () => clearInterval(interval);
   }, [order]);
 
+  const toggleItemDetails = (index: number) => {
+    setExpandedItems(prev =>
+      prev.includes(index)
+        ? prev.filter(i => i !== index)
+        : [...prev, index]
+    );
+  };
+
   const handleTrackOrder = () => {
     router.push('/track-order');
   };
@@ -110,14 +119,14 @@ export default function OrderConfirmationPage() {
       <Header />
 
       <main className="container mx-auto max-w-md p-4 pb-32">
-        <div className="bg-white rounded-2xl p-6 shadow-sm mt-6">
+        <div className="bg-white rounded-2xl p-3 shadow-sm mt-6">
           {/* Ícone de Confirmação */}
           <div className="text-center mb-6">
             <div className="w-20 h-20 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-4">
               <CheckIcon className="h-10 w-10 text-white" />
             </div>
             
-            <h1 className="text-2xl font-bold text-gray-800 mb-2">Pedido Confirmado!</h1>
+            <h1 className="text-3xl font-bold text-[#4F2712] mb-2">Pedido Confirmado!</h1>
             <p className="text-gray-600">
               Obrigado pela sua compra, {order.customer.name}! Seu pedido está sendo preparado com todo carinho.
             </p>
@@ -137,10 +146,10 @@ export default function OrderConfirmationPage() {
             <div className="text-center">
               <TruckIcon className="h-8 w-8 text-rose-500 mx-auto mb-2" />
               <p className="text-sm text-gray-600">Previsão de Entrega</p>
-              <p className="font-semibold text-gray-800">{countdown}</p>
               <p className="text-xs text-gray-500 mt-1">
                 {formatDate(order.estimatedDelivery)}
               </p>
+              <p className="font-semibold text-gray-800">{countdown}</p>
             </div>
             <div className="text-center">
               <ClockIcon className="h-8 w-8 text-rose-500 mx-auto mb-2" />
@@ -174,37 +183,97 @@ export default function OrderConfirmationPage() {
           {/* Resumo do Pedido */}
           <section className="mb-6">
             <h3 className="text-lg font-bold text-gray-800 mb-3">Resumo do Pedido</h3>
-            <div className="space-y-3">
-              {order.items.map((item, index) => (
-                <div key={index} className="flex justify-between items-start">
-                  <div className="flex-1">
-                    <p className="font-medium text-gray-800">{item.name}</p>
-                    <div className="text-sm text-gray-600 mt-1">
-                      <p><strong>Sabor:</strong> {item.customization?.flavor || 'Não especificado'}</p>
-                      {item.customization?.frosting && item.customization.frosting !== 'Nenhuma' && (
-                        <p><strong>Cobertura:</strong> {item.customization.frosting}</p>
-                      )}
-                      {item.customization?.toppings && item.customization.toppings.length > 0 && (
-                        <p><strong>Toppings:</strong> {item.customization.toppings.join(', ')}</p>
-                      )}
-                      {item.customization?.addOns && item.customization.addOns.length > 0 && (
-                        <p><strong>Add-Ons:</strong> {item.customization.addOns.join(', ')}</p>
-                      )}
-                      {item.customization?.extras && item.customization.extras.length > 0 && (
-                        <p><strong>Extras:</strong> {item.customization.extras.join(', ')}</p>
-                      )}
+            <div className="space-y-4">
+              {order.items.map((item, index) => {
+                const isExpanded = expandedItems.includes(index);
+                const hasCustomization = item.customization && (
+                  item.customization.frosting !== 'Nenhuma' ||
+                  (item.customization.toppings && item.customization.toppings.length > 0) ||
+                  (item.customization.addOns && item.customization.addOns.length > 0) ||
+                  (item.customization.extras && item.customization.extras.length > 0)
+                );
+
+                return (
+                  <div key={index} className="bg-gray-50 rounded-lg p-4">
+                    <div className="flex gap-4">
+                      {/* Imagem do item */}
+                      <img
+                        src={item.image}
+                        alt={item.name}
+                        className="w-16 h-16 rounded-lg object-cover flex-shrink-0"
+                      />
+                      
+                      <div className="flex-1">
+                        <div className="flex justify-between items-start">
+                          <div className="flex-1">
+                            <p className="font-semibold text-gray-800">{item.name}</p>
+                            <p className="text-rose-600 font-bold text-sm mt-1">
+                              R$ {(item.price * item.quantity).toFixed(2)}
+                            </p>
+                            <p className="text-gray-600 text-xs mt-1">
+                              {item.quantity}x • Sabor: {item.customization?.flavor || 'Não especificado'}
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* Botão para expandir detalhes */}
+                        {hasCustomization && (
+                          <button
+                            onClick={() => toggleItemDetails(index)}
+                            className="flex items-center gap-1 text-rose-500 text-xs mt-2 hover:text-rose-600 transition-colors"
+                          >
+                            {isExpanded ? (
+                              <>
+                                <ChevronUpIcon className="h-3 w-3" />
+                                Menos detalhes
+                              </>
+                            ) : (
+                              <>
+                                <ChevronDownIcon className="h-3 w-3" />
+                                Mais detalhes
+                              </>
+                            )}
+                          </button>
+                        )}
+                      </div>
                     </div>
+
+                    {/* Detalhes expandidos */}
+                    {isExpanded && item.customization && (
+                      <div className="mt-3 pt-3 border-t border-gray-200">
+                        <div className="text-xs text-gray-600 space-y-2">
+                          {item.customization.frosting && item.customization.frosting !== 'Nenhuma' && (
+                            <div>
+                              <strong>Cobertura:</strong> {item.customization.frosting}
+                            </div>
+                          )}
+                          
+                          {item.customization.toppings && item.customization.toppings.length > 0 && (
+                            <div>
+                              <strong>Toppings:</strong> {item.customization.toppings.join(', ')}
+                            </div>
+                          )}
+                          
+                          {item.customization.addOns && item.customization.addOns.length > 0 && (
+                            <div>
+                              <strong>Add-Ons:</strong> {item.customization.addOns.join(', ')}
+                            </div>
+                          )}
+                          
+                          {item.customization.extras && item.customization.extras.length > 0 && (
+                            <div>
+                              <strong>Extras:</strong> {item.customization.extras.join(', ')}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
                   </div>
-                  <div className="text-right">
-                    <p className="font-semibold text-gray-800">
-                      R$ {(item.price * item.quantity).toFixed(2)}
-                    </p>
-                    <p className="text-sm text-gray-600">{item.quantity}x</p>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
 
+            {/* Resumo financeiro */}
             <div className="border-t border-gray-200 mt-4 pt-4 space-y-2">
               <div className="flex justify-between text-sm">
                 <span>Subtotal</span>

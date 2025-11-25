@@ -1,7 +1,8 @@
 // app/products/page.tsx
 'use client';
 
-import { useState } from 'react';
+
+import { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Header } from '@/components/Client/Header';
 import { useCart } from '@/contexts/CartContext';
@@ -9,7 +10,8 @@ import {
   MagnifyingGlassIcon, 
   FunnelIcon,
   ChevronDownIcon,
-  PlusIcon
+  PlusIcon,
+  XMarkIcon
 } from '@heroicons/react/24/outline';
 
 // Dados mockados dos bolos
@@ -96,23 +98,58 @@ export default function ProductsPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { addToCart } = useCart();
-  
+  const initialSearch = searchParams.get('search') || '';
+  const initialCategory = searchParams.get('category') || 'Todos';
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState(searchParams.get('category') || 'Todos');
   const [selectedSize, setSelectedSize] = useState('Todos');
   const [selectedFlavor, setSelectedFlavor] = useState('Todos');
   const [showFilters, setShowFilters] = useState(false);
 
+  useEffect(() => {
+    const search = searchParams.get('search') || '';
+    const category = searchParams.get('category') || 'Todos';
+    
+    setSearchTerm(search);
+    setSelectedCategory(category);
+  }, [searchParams]);
+
+  // Função para atualizar a URL sem recarregar a página
+  const updateURL = (params: { search?: string; category?: string }) => {
+    const newParams = new URLSearchParams();
+    
+    if (params.search) newParams.set('search', params.search);
+    if (params.category && params.category !== 'Todos') newParams.set('category', params.category);
+    
+    const queryString = newParams.toString();
+    const newUrl = queryString ? `/products?${queryString}` : '/products';
+    
+    router.push(newUrl, { scroll: false });
+  };
+
   // Filtrar bolos baseado nas seleções
   const filteredBolos = bolos.filter(bolo => {
-    const matchesSearch = bolo.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         bolo.description.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSearch = searchTerm === '' || 
+      bolo.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      bolo.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      bolo.flavors.some(flavor => flavor.toLowerCase().includes(searchTerm.toLowerCase()));
+    
     const matchesCategory = selectedCategory === 'Todos' || bolo.category === selectedCategory;
     const matchesSize = selectedSize === 'Todos' || bolo.size === selectedSize;
     const matchesFlavor = selectedFlavor === 'Todos' || bolo.flavors.includes(selectedFlavor);
     
     return matchesSearch && matchesCategory && matchesSize && matchesFlavor;
   });
+
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    updateURL({ search: searchTerm, category: selectedCategory });
+  };
+
+  const handleCategoryChange = (category: string) => {
+    setSelectedCategory(category);
+    updateURL({ search: searchTerm, category });
+  };
 
   const handleAddToCart = (bolo: typeof bolos[0]) => {
     const cartItem = {
@@ -150,88 +187,129 @@ export default function ProductsPage() {
   };
 
   const clearFilters = () => {
+    setSearchTerm('');
     setSelectedCategory('Todos');
     setSelectedSize('Todos');
     setSelectedFlavor('Todos');
-    setSearchTerm('');
+    router.push('/products', { scroll: false });
   };
 
-  return (
-    <div className="min-h-screen bg-rose-50">
+  const clearSearch = () => {
+    setSearchTerm('');
+    updateURL({ search: '', category: selectedCategory });
+  };
+
+  // Contador de filtros ativos
+  const activeFiltersCount = [
+    searchTerm ? 1 : 0,
+    selectedCategory !== 'Todos' ? 1 : 0,
+    selectedSize !== 'Todos' ? 1 : 0,
+    selectedFlavor !== 'Todos' ? 1 : 0,
+  ].reduce((a, b) => a + b, 0);
+
+    return (
+    <div className="min-h-screen bg-[#FFFFF4]">
       <Header />
 
       <main className="pb-24">
-        {/* Título */}
-        <h1 className="px-4 pb-3 pt-6 text-left text-3xl font-bold text-gray-800">
-          Nossas Criações
-        </h1>
-
-        {/* Barra de pesquisa e filtros */}
-        <div className="flex gap-3 overflow-x-auto p-4 pt-0">
-          {/* Botão Filtrar */}
-          <button
-            onClick={() => setShowFilters(!showFilters)}
-            className="flex h-8 shrink-0 items-center gap-2 rounded-lg border border-rose-600 bg-rose-600/10 px-3"
-          >
-            <FunnelIcon className="h-4 w-4 text-rose-600" />
-            <span className="text-sm font-medium text-rose-600">Filtrar</span>
-          </button>
-
-          {/* Filtros rápidos */}
-          <select
-            value={selectedCategory}
-            onChange={(e) => setSelectedCategory(e.target.value)}
-            className="h-8 rounded-lg border border-gray-200 bg-white px-3 text-sm font-medium text-gray-700"
-          >
-            {categories.map(category => (
-              <option key={category} value={category}>{category}</option>
-            ))}
-          </select>
-
-          <select
-            value={selectedSize}
-            onChange={(e) => setSelectedSize(e.target.value)}
-            className="h-8 rounded-lg border border-gray-200 bg-white px-3 text-sm font-medium text-gray-700"
-          >
-            {sizes.map(size => (
-              <option key={size} value={size}>{size}</option>
-            ))}
-          </select>
-
-          <select
-            value={selectedFlavor}
-            onChange={(e) => setSelectedFlavor(e.target.value)}
-            className="h-8 rounded-lg border border-gray-200 bg-white px-3 text-sm font-medium text-gray-700"
-          >
-            {flavors.map(flavor => (
-              <option key={flavor} value={flavor}>{flavor}</option>
-            ))}
-          </select>
+        {/* Título com contador de resultados */}
+        <div className="px-4 pb-3 pt-6">
+          <h1 className="text-3xl font-bold text-[#4F2712] mb-2">
+            Nossas Criações
+          </h1>
+          {filteredBolos.length > 0 && (
+            <p className="text-gray-600">
+              {filteredBolos.length} {filteredBolos.length === 1 ? 'bolo encontrado' : 'bolos encontrados'}
+              {activeFiltersCount > 0 && ` • ${activeFiltersCount} filtro(s) ativo(s)`}
+            </p>
+          )}
         </div>
 
         {/* Barra de pesquisa */}
         <div className="px-4 pb-4">
-          <div className="relative">
+          <form onSubmit={handleSearch} className="relative">
             <input
               type="text"
-              placeholder="Buscar bolos..."
+              placeholder="Buscar bolos, sabores, ocasiões..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2 pl-10 focus:ring-2 focus:ring-rose-500 focus:border-transparent"
+              className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2 pl-10 pr-10 focus:ring-2 focus:ring-rose-500 focus:border-transparent"
             />
             <MagnifyingGlassIcon className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-          </div>
+            {searchTerm && (
+              <button
+                type="button"
+                onClick={clearSearch}
+                className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+              >
+                <XMarkIcon className="h-4 w-4" />
+              </button>
+            )}
+          </form>
+        </div>
+
+        {/* Barra de filtros rápidos */}
+        <div className="flex gap-3 overflow-x-auto p-4 pt-0">
+          {/* Botão Filtrar com contador */}
+          <button
+            onClick={() => setShowFilters(!showFilters)}
+            className="flex h-8 shrink-0 items-center gap-2 rounded-lg border border-rose-600 bg-rose-600/10 px-3 relative"
+          >
+            <FunnelIcon className="h-4 w-4 text-rose-600" />
+            <span className="text-sm font-medium text-rose-600">Filtrar</span>
+            {activeFiltersCount > 0 && (
+              <span className="absolute -top-1 -right-1 bg-rose-500 text-white text-xs rounded-full h-4 w-4 flex items-center justify-center">
+                {activeFiltersCount}
+              </span>
+            )}
+          </button>
+
+          {/* Filtros rápidos de categoria */}
+          <button
+            onClick={() => handleCategoryChange('Todos')}
+            className={`flex h-8 shrink-0 items-center gap-2 rounded-lg border px-3 text-sm font-medium ${
+              selectedCategory === 'Todos' 
+                ? 'border-rose-600 bg-rose-600 text-white' 
+                : 'border-gray-200 bg-white text-gray-700'
+            }`}
+          >
+            Todos
+          </button>
+
+          {categories.filter(cat => cat !== 'Todos').map(category => (
+            <button
+              key={category}
+              onClick={() => handleCategoryChange(category)}
+              className={`flex h-8 shrink-0 items-center gap-2 rounded-lg border px-3 text-sm font-medium ${
+                selectedCategory === category 
+                  ? 'border-rose-600 bg-rose-600 text-white' 
+                  : 'border-gray-200 bg-white text-gray-700'
+              }`}
+            >
+              {category}
+            </button>
+          ))}
         </div>
 
         {/* Filtros expandidos */}
         {showFilters && (
           <div className="border-t border-rose-100 bg-white p-4 mb-4">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="font-semibold text-gray-800">Filtros</h3>
+              <button
+                onClick={clearFilters}
+                className="text-rose-600 hover:text-rose-700 text-sm font-medium"
+              >
+                Limpar tudo
+              </button>
+            </div>
+
             <div className="grid grid-cols-2 gap-4 mb-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Categoria</label>
                 <select
                   value={selectedCategory}
-                  onChange={(e) => setSelectedCategory(e.target.value)}
+                  onChange={(e) => handleCategoryChange(e.target.value)}
                   className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm"
                 >
                   {categories.map(category => (
@@ -266,13 +344,6 @@ export default function ProductsPage() {
                 ))}
               </select>
             </div>
-            
-            <button
-              onClick={clearFilters}
-              className="w-full bg-gray-100 hover:bg-gray-200 text-gray-700 py-2 rounded-lg text-sm font-medium transition-colors"
-            >
-              Limpar Filtros
-            </button>
           </div>
         )}
 
@@ -280,13 +351,24 @@ export default function ProductsPage() {
         <div className="flex flex-col gap-4 px-4">
           {filteredBolos.length === 0 ? (
             <div className="text-center py-8">
-              <p className="text-gray-500">Nenhum bolo encontrado com os filtros selecionados.</p>
-              <button
-                onClick={clearFilters}
-                className="text-rose-600 hover:text-rose-700 font-medium mt-2"
-              >
-                Limpar filtros
-              </button>
+              <div className="text-gray-400 mb-4">
+                <MagnifyingGlassIcon className="h-12 w-12 mx-auto mb-2" />
+                <p className="text-gray-500 mb-2">Nenhum bolo encontrado</p>
+                <p className="text-sm text-gray-400 mb-4">
+                  {activeFiltersCount > 0 
+                    ? "Tente ajustar os filtros ou buscar por outros termos."
+                    : "Em breve teremos novidades!"
+                  }
+                </p>
+              </div>
+              {activeFiltersCount > 0 && (
+                <button
+                  onClick={clearFilters}
+                  className="bg-rose-500 hover:bg-rose-600 text-white font-medium py-2 px-6 rounded-lg transition-colors"
+                >
+                  Limpar filtros
+                </button>
+              )}
             </div>
           ) : (
             filteredBolos.map((bolo) => (
@@ -298,7 +380,7 @@ export default function ProductsPage() {
                 
                 <div className="p-4">
                   <div className="flex justify-between items-start mb-2">
-                    <h3 className="text-lg font-bold text-gray-800 flex-1">{bolo.name}</h3>
+                    <h3 className="text-lg font-bold text-[#4F2712] flex-1">{bolo.name}</h3>
                     <span className="bg-rose-100 text-rose-600 text-xs font-medium px-2 py-1 rounded-full ml-2">
                       {bolo.category}
                     </span>
@@ -332,7 +414,7 @@ export default function ProductsPage() {
                         className="flex items-center gap-1 bg-rose-500 hover:bg-rose-600 text-white px-3 py-2 rounded-lg text-sm transition-colors"
                       >
                         <PlusIcon className="h-4 w-4" />
-                        Add Carrinho
+                        Adicionar ao Carrinho
                       </button>
                     </div>
                   </div>

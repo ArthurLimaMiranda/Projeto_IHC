@@ -1,5 +1,8 @@
 // app/page.tsx
+'use client';
 import { Header } from "@/components/Client/Header";
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Footer } from "@/components/Client/Footer";
 import { CarrosselProdutos } from "@/components/Client/CarrosselProdutos";
 import { Categorias } from "@/components/Client/Categorias";
@@ -9,11 +12,35 @@ import {
   HeartIcon,
   AcademicCapIcon,
   GiftIcon,
-  PencilIcon
+  MagnifyingGlassIcon,
 } from "@heroicons/react/24/solid";
-import Link from "next/link";
 
-async function Home() {
+export default function Home() {
+  const handleRequestQuote = (itemTitle?: string) => {
+    const phoneNumber = "5511999999999"; // Substitua pelo número real
+    const baseMessage = "Olá! Gostaria de fazer um orçamento para um bolo personalizado.";
+    const message = itemTitle ? `${baseMessage} Me interessei pelo modelo: ${itemTitle}` : baseMessage;
+    
+    window.open(`https://wa.me/${phoneNumber}?text=${encodeURIComponent(message)}`, '_blank');
+  };
+
+  const router = useRouter();
+  const [searchTerm, setSearchTerm] = useState('');
+
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (searchTerm.trim()) {
+      router.push(`/products?search=${encodeURIComponent(searchTerm)}`);
+    } else {
+      router.push('/products');
+    }
+  };
+
+  const handleCategoryClick = (category: string) => {
+    router.push(`/products?category=${encodeURIComponent(category)}`);
+  };
+
+
   return (
     <>
       <Header />
@@ -23,16 +50,22 @@ async function Home() {
           <h1 className="text-4xl font-bold mb-4 font-poppins">Bem-vindo(a)!</h1>
           <p className="text-xl mb-8">O que sua comemoração merece?</p>
           <div className="max-w-2xl mx-auto">
-            <div className="bg-white rounded-full px-4 py-2 flex items-center">
+            <form onSubmit={handleSearch} className="bg-white rounded-full px-4 py-2 flex items-center">
               <input 
                 type="text" 
                 placeholder="Buscar bolos, sabores, ocasiões..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full bg-transparent text-[#4F2712] outline-none px-2 placeholder:text-sm"
               />
-              <button className="bg-[#B95760] text-white rounded-full px-3 py-2 hover:bg-[#34A7B2] transition-colors text-sm">
+              <button 
+                type="submit"
+                className="bg-[#B95760] text-white rounded-full px-3 py-2 hover:bg-[#34A7B2] transition-colors text-sm flex items-center gap-1"
+              >
+                <MagnifyingGlassIcon className="h-4 w-4" />
                 Buscar
               </button>
-            </div>
+            </form>
           </div>
         </section>
 
@@ -45,72 +78,80 @@ async function Home() {
         </section>
 
         <section className="flex items-center justify-center my-10">
-          <Link href={'/monte-seu-kit'} className="px-8 py-4 bg-[#B95760] text-white rounded-xl text-xl hover:bg-[#34A7B2] transition font-semibold font-poppins flex items-center gap-3">
-            <PencilIcon className="h-6 w-6 text-white" />
-            Monte seu Kit
-          </Link>
+          <button
+            onClick={() => handleRequestQuote()}
+            className="px-8 py-4 bg-[#B95760] text-white rounded-xl text-xl hover:bg-[#34A7B2] transition font-semibold font-poppins flex items-center gap-3"
+          >
+            <HeartIcon className="h-6 w-6 text-white" />
+            Fazer Orçamento
+          </button>
         </section>
 
         {/* Seção Mais Vendidos */}
-        <section className="py-12 bg-white">
+        <section className="py-12 bg-[#FFFFF4]">
           <div className="max-w-6xl mx-auto px-4">
-
-            {/* Cabeçalho com título e link */}
             <div className="flex items-center justify-between">
               <h3 className="text-3xl font-bold text-[#4F2712]">
                 Mais Vendidos
               </h3>
-
               <a
-                href="/produtos"
+                href="/products"
                 className="text-[#34A7B2] hover:underline font-medium text-lg"
               >
                 Ver tudo
               </a>
             </div>
-
             <CarrosselProdutos />
-
           </div>
         </section>
 
         <section className="py-12 px-4 max-w-6xl mx-auto">
-
-          {/* Títulos lado a lado */}
           <div className="flex flex-row justify-between mb-6">
-            <h3 className="text-3xl font-bold text-[#4F2712] ">Categoria</h3>
-            <h3 className="text-lg text-[#34A7B2] hover:underline md:text-right font-medium">Ver tudo</h3>
+            <h3 className="text-3xl font-bold text-[#4F2712]">Categoria</h3>
+            <button
+              onClick={() => router.push('/products')}
+              className="text-[#34A7B2] hover:underline font-medium text-lg"
+            >
+              Ver tudo
+            </button>
           </div>
 
-          {/* Cards lado a lado */}
-          <div className="grid grid-cols-2 grid-rows-2 gap-2">
-            {/* Linha 1 - Coluna 1 */}
-            <div className="bg-[#34A7B2] rounded-lg px-4 py-6 shadow-sm flex flex-col justify-center">
+          <div className="grid grid-cols-2 grid-rows-2 gap-4">
+            <button 
+              onClick={() => handleCategoryClick('Aniversário')}
+              className="bg-[#34A7B2] rounded-lg px-4 py-6 shadow-sm flex flex-col justify-center items-center hover:bg-[#2B8C95] transition-colors cursor-pointer"
+            >
               <CakeIcon className="h-10 w-10 text-white mb-3" />
               <h4 className="font-semibold text-lg text-white">Aniversário</h4>
-              <p className="text-white">Bolos especiais</p>
-            </div>
+              <p className="text-white text-sm">Bolos especiais</p>
+            </button>
 
-            {/* Linha 1 - Coluna 2 */}
-            <div className="bg-[#B95760] rounded-lg px-4 py-6 shadow-sm flex flex-col justify-center">
+            <button 
+              onClick={() => handleCategoryClick('Casamento')}
+              className="bg-[#B95760] rounded-lg px-4 py-6 shadow-sm flex flex-col justify-center items-center hover:bg-[#A34C54] transition-colors cursor-pointer"
+            >
               <HeartIcon className="h-10 w-10 text-white mb-3" />
               <h4 className="font-semibold text-lg text-white">Casamento</h4>
-              <p className="text-white">Bolos elegantes</p>
-            </div>
+              <p className="text-white text-sm">Bolos elegantes</p>
+            </button>
 
-            {/* Linha 2 - Coluna 1 */}
-            <div className="bg-[#B95760] rounded-lg px-4 py-6 shadow-sm flex flex-col justify-center">
+            <button 
+              onClick={() => handleCategoryClick('Chá de Bebê')}
+              className="bg-[#B95760] rounded-lg px-4 py-6 shadow-sm flex flex-col justify-center items-center hover:bg-[#A34C54] transition-colors cursor-pointer"
+            >
               <GiftIcon className="h-10 w-10 text-white mb-3" />
               <h4 className="font-semibold text-lg text-white">Chá de Bebê</h4>
-              <p className="text-white">Temas feitos</p>
-            </div>
+              <p className="text-white text-sm">Temas feitos</p>
+            </button>
 
-            {/* Linha 2 - Coluna 2 */}
-            <div className="bg-[#34A7B2] rounded-lg px-4 py-6 shadow-sm flex flex-col justify-center">
+            <button 
+              onClick={() => handleCategoryClick('Formatura')}
+              className="bg-[#34A7B2] rounded-lg px-4 py-6 shadow-sm flex flex-col justify-center items-center hover:bg-[#2B8C95] transition-colors cursor-pointer"
+            >
               <AcademicCapIcon className="h-10 w-10 text-white mb-3" />
               <h4 className="font-semibold text-lg text-white">Formatura</h4>
-              <p className="text-white">Celebre conosco</p>
-            </div>
+              <p className="text-white text-sm">Celebre conosco</p>
+            </button>
           </div>
         </section>
 
@@ -131,5 +172,3 @@ async function Home() {
     </>
   );
 }
-
-export default Home;

@@ -9,10 +9,13 @@ import {
   CheckCircleIcon,
   ClockIcon,
   CakeIcon,
-  PhoneIcon
+  PhoneIcon,
+  ChevronDownIcon,
+  ChevronUpIcon
 } from '@heroicons/react/24/outline';
 import { CheckIcon } from '@heroicons/react/24/solid';
 import { Header } from '@/components/Client/Header';
+import { Footer } from '@/components/Client/Footer';
 
 // Status possíveis para os pedidos
 const ORDER_STATUS = {
@@ -26,42 +29,120 @@ const ORDER_STATUS = {
   CANCELLED: { label: 'Cancelado', color: 'text-red-600', bgColor: 'bg-red-100' }
 };
 
+// Dados de exemplo para demonstração (remova em produção)
+const SAMPLE_ORDERS = [
+  {
+    id: 'JUJU' + Date.now().toString().slice(-8),
+    customer: {
+      name: 'João Silva',
+      address: 'Rua das Flores, 123 - Centro',
+      phone: '11999999999',
+      notes: 'Entregar após as 14h'
+    },
+    items: [
+      {
+        id: 1,
+        name: 'Bolo de Chocolate Personalizado',
+        description: 'Bolo decorado com chocolate',
+        price: 80.00,
+        quantity: 1,
+        image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuBJeZalV3RmogkHWMdqXX_lLoBKmiLozGHk2ondHXW3XTYMpDBkNLgCwzWtowoRcw5E2_DAwToez2QUZuwiqbsDsUiaNN5wHJUPr58L1g2jQJfFUXSlo5BGqm4e2Ee-ERUr9BYOrCv1uCfkzbfry_bav5vzKi_ktJVrl8zqJW9kQ2UV7pcVk3q28NU651xYugpLzVISVeu8e2nKiQsIeUSCLIAecCBTrgPvSYueN_WsjkCP6skDA3T04bZpyw7TB-m6UHxo4CXwZCQ3',
+        customization: {
+          flavor: 'Chocolate',
+          frosting: 'Ganache de Chocolate',
+          toppings: ['Frutas Frescas', 'Chocolate Premium'],
+          addOns: ['Velas Personalizadas'],
+          extras: ['Brigadeiros']
+        }
+      }
+    ],
+    subtotal: 80.00,
+    deliveryFee: 8.00,
+    discount: 4.40,
+    total: 83.60,
+    paymentMethod: 'pix',
+    orderDate: new Date().toISOString(),
+    estimatedDelivery: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString(),
+    status: 'PENDING',
+    timeline: [
+      {
+        status: 'PENDING',
+        timestamp: new Date().toISOString(),
+        description: 'Pedido recebido e confirmado'
+      },
+      {
+        status: 'PREPARING',
+        timestamp: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
+        description: 'Iniciando preparação dos ingredientes'
+      }
+    ]
+  }
+];
+
 export default function TrackOrderPage() {
   const router = useRouter();
   const [phone, setPhone] = useState('');
   const [orders, setOrders] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [searched, setSearched] = useState(false);
+  const [expandedItems, setExpandedItems] = useState<{ [key: string]: boolean }>({});
+
+  const formatPhoneForSearch = (phone: string) => {
+    // Remove tudo que não é número para comparação consistente
+    return phone.replace(/\D/g, '');
+  };
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!phone.trim()) return;
+    
+    const searchPhone = formatPhoneForSearch(phone);
+    if (!searchPhone) {
+      alert('Por favor, digite um número de telefone válido');
+      return;
+    }
 
     setIsLoading(true);
     setSearched(true);
 
-    // Buscar pedidos no localStorage pelo número de telefone
-    setTimeout(() => {
-      try {
-        const allOrders = JSON.parse(localStorage.getItem('juju-orders') || '[]');
-        const foundOrders = allOrders.filter((order: any) => {
-          const orderPhone = order.customer.phone.replace(/\D/g, '');
-          const searchPhone = phone.replace(/\D/g, '');
-          return orderPhone.includes(searchPhone) || searchPhone.includes(orderPhone);
-        });
+    try {
+      // Buscar pedidos no localStorage
+      const allOrders = JSON.parse(localStorage.getItem('juju-orders') || '[]');
+      
+      // Filtrar pedidos pelo telefone (formato consistente)
+      const foundOrders = allOrders.filter((order: any) => {
+        const orderPhone = formatPhoneForSearch(order.customer.phone);
+        const searchPhoneFormatted = formatPhoneForSearch(searchPhone);
         
-        // Ordenar por data mais recente primeiro
-        foundOrders.sort((a: any, b: any) => 
-          new Date(b.orderDate).getTime() - new Date(a.orderDate).getTime()
-        );
-        
-        setOrders(foundOrders);
-      } catch (error) {
-        console.error('Erro ao buscar pedidos:', error);
-        setOrders([]);
+        console.log('Comparando:', orderPhone, 'com', searchPhoneFormatted);
+        return orderPhone === searchPhoneFormatted;
+      });
+
+      // Se não encontrou pedidos, mostrar mensagem
+      if (foundOrders.length === 0) {
+        console.log('Nenhum pedido encontrado para:', searchPhone);
+        console.log('Pedidos no localStorage:', allOrders);
       }
+
+      // Ordenar por data mais recente primeiro
+      foundOrders.sort((a: any, b: any) => 
+        new Date(b.orderDate).getTime() - new Date(a.orderDate).getTime()
+      );
+      
+      setOrders(foundOrders);
+    } catch (error) {
+      console.error('Erro ao buscar pedidos:', error);
+      setOrders([]);
+    } finally {
       setIsLoading(false);
-    }, 1000);
+    }
+  };
+
+  const toggleItemDetails = (orderId: string, itemId: number) => {
+    const key = `${orderId}-${itemId}`;
+    setExpandedItems(prev => ({
+      ...prev,
+      [key]: !prev[key]
+    }));
   };
 
   const getStatusInfo = (status: string) => {
@@ -69,9 +150,9 @@ export default function TrackOrderPage() {
   };
 
   const getProgressPercentage = (currentStatus: string) => {
-    const statusOrder = Object.keys(ORDER_STATUS);
+    const statusOrder = ['PENDING', 'PREPARING', 'BAKING', 'DECORATING', 'READY', 'ON_THE_WAY', 'DELIVERED'];
     const currentIndex = statusOrder.indexOf(currentStatus);
-    return ((currentIndex + 1) / statusOrder.length) * 100;
+    return currentIndex >= 0 ? ((currentIndex + 1) / statusOrder.length) * 100 : 0;
   };
 
   const formatDate = (dateString: string) => {
@@ -104,20 +185,30 @@ export default function TrackOrderPage() {
     return 'Entregue';
   };
 
+  const formatPhoneDisplay = (phone: string) => {
+    // Formatar telefone para exibição: (11) 99999-9999
+    const cleaned = phone.replace(/\D/g, '');
+    const match = cleaned.match(/^(\d{2})(\d{5})(\d{4})$/);
+    if (match) {
+      return `(${match[1]}) ${match[2]}-${match[3]}`;
+    }
+    return phone;
+  };
+
   return (
-    <div className="min-h-screen bg-rose-50">
+    <div className="min-h-screen bg-[#FFFFF4]">
       <Header />
 
-      <main className="container mx-auto max-w-2xl p-4 pb-32">
-        <div className="bg-white rounded-2xl p-6 shadow-sm mt-6">
-          <h1 className="text-2xl font-bold text-gray-800 mb-2">Rastrear Seu Pedido</h1>
-          <p className="text-gray-600 mb-6">
+      <main className="container mx-auto max-w-2xl pb-32">
+        <div className="bg-white rounded-2xl p-3 shadow-sm mt-6 gap-y-5 flex flex-col">
+          <h1 className="text-3xl font-bold text-[#4F2712] mb-2 px-4 pt-4 text-center">Rastrear Seu Pedido</h1>
+          <p className="text-gray-600 mb-6 px-4 text-center">
             Digite o número de telefone usado no pedido para acompanhar o status
           </p>
 
           {/* Formulário de Busca */}
-          <form onSubmit={handleSearch} className="mb-8">
-            <div className="flex gap-2">
+          <form onSubmit={handleSearch}>
+            <div className="flex flex-col gap-2 items-end px-4">
               <div className="flex-1 relative">
                 <PhoneIcon className="h-5 w-5 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2" />
                 <input
@@ -127,14 +218,16 @@ export default function TrackOrderPage() {
                   placeholder="(11) 99999-9999"
                   className="w-full pl-10 pr-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-rose-500 focus:border-transparent"
                   required
+                  pattern="[0-9\s\-\(\)]+"
+                  title="Digite um número de telefone válido"
                 />
               </div>
               <button
                 type="submit"
                 disabled={isLoading}
-                className="bg-rose-500 hover:bg-rose-600 text-white px-6 py-3 rounded-lg font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                className="bg-rose-500 hover:bg-rose-600 text-white py-3 rounded-lg justify-center font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex flex-row w-[50%] items-center gap-2"
               >
-                <MagnifyingGlassIcon className="h-5 w-5" />
+                <MagnifyingGlassIcon className="h-5 w-5"/>
                 {isLoading ? 'Buscando...' : 'Buscar'}
               </button>
             </div>
@@ -148,20 +241,22 @@ export default function TrackOrderPage() {
                   <TruckIcon className="h-16 w-16 text-gray-300 mx-auto mb-4" />
                   <h3 className="text-lg font-semibold text-gray-800 mb-2">Nenhum pedido encontrado</h3>
                   <p className="text-gray-600 mb-4">
-                    Não encontramos pedidos para o número <strong>{phone}</strong>.
+                    Não encontramos pedidos para o número <strong>{formatPhoneDisplay(phone)}</strong>.
                   </p>
                   <p className="text-sm text-gray-500">
                     Verifique se o número está correto ou entre em contato conosco.
                   </p>
+                  <div className="mt-4 p-4 bg-rose-50 rounded-lg">
+                    <p className="text-sm text-rose-600">
+                      <strong>Dica:</strong> Use o mesmo número que você usou ao fazer o pedido.
+                    </p>
+                  </div>
                 </div>
               ) : (
                 <div className="space-y-6">
                   <div className="bg-rose-50 rounded-lg p-4 mb-4">
-                    <p className="text-sm text-rose-700">
-                      📞 <strong>Telefone:</strong> {phone}
-                    </p>
-                    <p className="text-sm text-rose-600 mt-1">
-                      Encontramos {orders.length} pedido(s) para este número
+                    <p className="text-sm text-rose-600 text-center">
+                      Encontramos {orders.length} pedido(s) para {formatPhoneDisplay(phone)}
                     </p>
                   </div>
 
@@ -172,14 +267,17 @@ export default function TrackOrderPage() {
                     return (
                       <div key={order.id} className="border border-gray-200 rounded-lg p-4">
                         {/* Cabeçalho do Pedido */}
-                        <div className="flex justify-between items-start mb-4">
+                        <div className="flex flex-row justify-between items-start mb-4">
                           <div>
-                            <h3 className="font-bold text-gray-800">Pedido #{order.id}</h3>
+                            <h3 className="font-semibold text-[#4F2712]">Pedido #{order.id}</h3>
                             <p className="text-sm text-gray-600">
                               {formatDate(order.orderDate)}
                             </p>
                             <p className="text-sm text-gray-500 mt-1">
                               <strong>Cliente:</strong> {order.customer.name}
+                            </p>
+                            <p className="text-sm text-gray-500">
+                              <strong>Telefone:</strong> {formatPhoneDisplay(order.customer.phone)}
                             </p>
                           </div>
                           <span className={`px-3 py-1 rounded-full text-sm font-medium ${statusInfo.bgColor} ${statusInfo.color}`}>
@@ -203,25 +301,114 @@ export default function TrackOrderPage() {
 
                         {/* Itens do Pedido */}
                         <div className="mb-4">
-                          <h4 className="font-semibold text-gray-800 mb-2">Itens do Pedido</h4>
-                          <ul className="text-sm text-gray-600">
-                            {order.items.map((item: any, index: number) => (
-                              <li key={index} className="flex items-center gap-2 mb-2">
-                                <CakeIcon className="h-4 w-4 text-rose-500 flex-shrink-0" />
-                                <div className="flex-1">
-                                  <span className="font-medium">{item.name}</span>
-                                  <div className="text-xs text-gray-500 mt-1">
-                                    <div><strong>Sabor:</strong> {item.customization?.flavor}</div>
-                                    {item.customization?.frosting && item.customization.frosting !== 'Nenhuma' && (
-                                      <div><strong>Cobertura:</strong> {item.customization.frosting}</div>
+                          <h4 className="font-semibold text-gray-800 mb-3">Itens do Pedido</h4>
+                          <ul className="space-y-4">
+                            {order.items.map((item: any, index: number) => {
+                              const itemKey = `${order.id}-${item.id}`;
+                              const isExpanded = expandedItems[itemKey];
+                              
+                              return (
+                                <li key={index} className="flex flex-col gap-3 py-3 bg-[#B95760] bg-opacity-[25%] px-3 rounded-lg">
+                                  <div className='flex flex-row items-center gap-x-[3%]'>
+                                    {/* Imagem do Bolo */}
+                                    <img
+                                      src={item.image}
+                                      alt={item.name}
+                                      className="w-[20%] rounded-lg object-cover flex-shrink-0"
+                                    />
+
+                                      <p className="font-semibold text-gray-800 text-center px-5 w-[42%]">{item.name}</p>
+
+                                      <p className="font-semibold text-right text-sm text-rose-600 w-[32%]">
+                                        {item.quantity}x R$ {item.price.toFixed(2)}
+                                      </p>
+                                  </div>
+
+                                  
+                                  <div className="flex-1">
+                                    {/* Informações Básicas */}
+                                    
+                                    {/* Customizações Básicas (sempre visíveis) */}
+                                    <div className="text-sm text-gray-600 space-y-1  py-2">
+                                      <div><strong>Sabor:</strong> {item.customization?.flavor}</div>
+                                      {item.customization?.frosting && item.customization.frosting !== 'Nenhuma' && (
+                                        <div><strong>Cobertura:</strong> {item.customization.frosting}</div>
+                                      )}
+                                    </div>
+
+                                    {/* Botão Ver Mais/Menos */}
+                                    {(item.customization?.toppings?.length > 0 || 
+                                      item.customization?.addOns?.length > 0 || 
+                                      item.customization?.extras?.length > 0) && (
+                                      <button
+                                        onClick={() => toggleItemDetails(order.id, item.id)}
+                                        className="py-2 flex items-center gap-1 text-rose-500 text-xs mt-2 hover:text-rose-600 transition-colors w-full justify-center text-center"
+                                      >
+                                        {isExpanded ? (
+                                          <>
+                                            <ChevronUpIcon className="h-3 w-3" />
+                                            Ver menos detalhes
+                                          </>
+                                        ) : (
+                                          <>
+                                            <ChevronDownIcon className="h-3 w-3" />
+                                            Ver mais detalhes
+                                          </>
+                                        )}
+                                      </button>
                                     )}
                                   </div>
-                                </div>
-                                <span className="font-semibold">
-                                  {item.quantity}x R$ {item.price.toFixed(2)}
-                                </span>
-                              </li>
-                            ))}
+                                  {/* Detalhes Expandidos */}
+                                  {isExpanded && (
+                                    <div className="mt-3 pt-3 border-t border-gray-200 ">
+                                      <div className="text-sm text-gray-600 space-y-2">
+                                        {/* Toppings */}
+                                        {item.customization?.toppings?.length > 0 && (
+                                          <div>
+                                            <strong className="text-gray-700">Toppings:</strong>
+                                            <div className="flex flex-wrap gap-1 mt-1">
+                                              {item.customization.toppings.map((topping: string, idx: number) => (
+                                                <span key={idx} className="bg-blue-100 text-blue-700 px-2 py-1 rounded-full text-xs">
+                                                  {topping}
+                                                </span>
+                                              ))}
+                                            </div>
+                                          </div>
+                                        )}
+
+                                        {/* Add-Ons */}
+                                        {item.customization?.addOns?.length > 0 && (
+                                          <div>
+                                            <strong className="text-gray-700">Add-Ons:</strong>
+                                            <div className="flex flex-wrap gap-1 mt-1">
+                                              {item.customization.addOns.map((addon: string, idx: number) => (
+                                                <span key={idx} className="bg-green-100 text-green-700 px-2 py-1 rounded-full text-xs">
+                                                  {addon}
+                                                </span>
+                                              ))}
+                                            </div>
+                                          </div>
+                                        )}
+
+                                        {/* Extras */}
+                                        {item.customization?.extras?.length > 0 && (
+                                          <div>
+                                            <strong className="text-gray-700">Extras:</strong>
+                                            <div className="flex flex-wrap gap-1 mt-1">
+                                              {item.customization.extras.map((extra: string, idx: number) => (
+                                                <span key={idx} className="bg-purple-100 text-purple-700 px-2 py-1 rounded-full text-xs">
+                                                  {extra}
+                                                </span>
+                                              ))}
+                                            </div>
+                                          </div>
+                                        )}
+                                      </div>
+                                    </div>
+                                  )}
+                                </li>
+                              );
+                            })}
                           </ul>
                         </div>
 
@@ -335,11 +522,13 @@ export default function TrackOrderPage() {
             <div className="text-center py-8">
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-rose-500 mx-auto mb-4"></div>
               <p className="text-gray-600">Buscando seus pedidos...</p>
-              <p className="text-sm text-gray-500 mt-2">Verificando o número {phone}</p>
+              <p className="text-sm text-gray-500 mt-2">Verificando o número {formatPhoneDisplay(phone)}</p>
             </div>
           )}
         </div>
       </main>
+
+      <Footer />
     </div>
   );
 }

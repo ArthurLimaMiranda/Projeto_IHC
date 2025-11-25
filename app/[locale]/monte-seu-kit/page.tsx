@@ -3,8 +3,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { ChevronLeftIcon, ShoppingCartIcon } from '@heroicons/react/24/outline';
-import { ChevronUpIcon, ChevronDownIcon } from '@heroicons/react/24/solid';
+import { ChevronUpIcon, ChevronDownIcon, PlusIcon, ArrowRightIcon, ShoppingBagIcon, XMarkIcon, ShoppingCartIcon } from '@heroicons/react/24/solid';
 import { Header } from '@/components/Client/Header';
 import { useCart } from '@/contexts/CartContext';
 
@@ -121,7 +120,6 @@ const addOns = [
   },
 ];
 
-// Novos dados para extras
 const extras = [
   {
     id: 1,
@@ -193,6 +191,9 @@ export default function CustomizeCakeKit() {
     addOns: [] as number[],
     extras: [] as number[],
   });
+
+  const [showConfirmationModal, setShowConfirmationModal] = useState(false);
+  const [lastAddedItem, setLastAddedItem] = useState<any>(null);
 
   // Atualizar step quando expandir seções
   useEffect(() => {
@@ -349,7 +350,26 @@ export default function CustomizeCakeKit() {
     };
 
     addToCart(cartItem);
+    setLastAddedItem(cartItem);
+    setShowConfirmationModal(true);
+  };
+
+  const handleContinueShopping = () => {
+    setShowConfirmationModal(false);
+    router.push('/');
+  };
+
+  const handleGoToCart = () => {
+    setShowConfirmationModal(false);
     router.push('/cart');
+  };
+
+  const handleCustomizeAnother = () => {
+    setShowConfirmationModal(false);
+    // Resetar todas as seleções para personalizar outro bolo
+    setSelectedOptions({ flavor: null, frosting: null, toppings: [], addOns: [], extras: [] });
+    setExpandedSections([1]);
+    setCurrentStep(1);
   };
 
   // Determinar se uma seção pode ser acessada (só permite acessar a próxima seção após completar a anterior)
@@ -376,7 +396,7 @@ export default function CustomizeCakeKit() {
   };
 
   return (
-    <div className="min-h-screen bg-rose-50">
+    <div className="min-h-screen bg-[#FFFFF4]">
       <Header />
 
       <main className="pb-32">
@@ -746,21 +766,19 @@ export default function CustomizeCakeKit() {
       </main>
 
       {/* Fixed Footer */}
+      {/* Fixed Footer */}
       <footer className="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-sm border-t border-gray-200 p-4">
         <div className="flex items-center justify-between max-w-4xl mx-auto">
           <div className="text-left">
             <span className="text-sm text-gray-600">Preço Total</span>
-            <p className="text-2xl font-bold text-gray-800">
+            <p className="text-xl font-bold text-gray-800">
               R$ {calculateTotal().toFixed(2)}
             </p>
-            {!selectedOptions.flavor && (
-              <p className="text-xs text-rose-500 mt-1">Selecione um sabor para continuar</p>
-            )}
           </div>
           <button 
             onClick={handleAddToCart}
             disabled={!selectedOptions.flavor}
-            className={`px-4 py-3 rounded-3xl font-bold transition-colors shadow-lg ${
+            className={`px-6 py-3 rounded-full font-bold transition-colors shadow-lg flex items-center gap-2 ${
               selectedOptions.flavor
                 ? 'bg-rose-500 hover:bg-rose-600 text-white hover:shadow-xl'
                 : 'bg-gray-300 text-gray-500 cursor-not-allowed'
@@ -770,6 +788,77 @@ export default function CustomizeCakeKit() {
           </button>
         </div>
       </footer>
+
+      {/* Modal de Confirmação */}
+      {showConfirmationModal && lastAddedItem && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 animate-scale-in">
+            {/* Header do Modal */}
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-xl font-bold text-gray-800">Item Adicionado!</h3>
+              <button
+                onClick={() => setShowConfirmationModal(false)}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <XMarkIcon className="h-6 w-6" />
+              </button>
+            </div>
+
+            {/* Conteúdo do Modal */}
+            <div className="mb-6">
+              <div className="flex items-center gap-4 mb-4 bg-rose-50 rounded-lg">
+                <img
+                  src={lastAddedItem.image}
+                  alt={lastAddedItem.name}
+                  className="w-16 h-16 rounded-lg object-cover"
+                />
+                <div className="flex-1">
+                  <p className="font-semibold text-gray-800">{lastAddedItem.name}</p>
+                  <p className="text-rose-600 font-bold text-lg">
+                    R$ {lastAddedItem.price.toFixed(2)}
+                  </p>
+                </div>
+              </div>
+              
+              <p className="text-gray-600 text-center mb-2">
+                Seu bolo personalizado foi adicionado ao carrinho com sucesso!
+              </p>
+            </div>
+
+            {/* Botões de Ação */}
+            <div className="space-y-3">
+              <button
+                onClick={handleGoToCart}
+                className="w-full bg-rose-500 hover:bg-rose-600 text-white font-bold py-3 px-4 rounded-lg transition-colors flex items-center justify-center gap-2"
+              >
+                <ShoppingBagIcon className="h-5 w-5" />
+                Ver Carrinho e Finalizar
+              </button>
+              
+              <button
+                onClick={handleCustomizeAnother}
+                className="w-full border border-rose-500 text-rose-500 hover:bg-rose-50 font-bold py-3 px-4 rounded-lg transition-colors flex items-center justify-center gap-2"
+              >
+                <PlusIcon className="h-5 w-5" />
+                Personalizar Outro Bolo
+              </button>
+              
+              <button
+                onClick={handleContinueShopping}
+                className="w-full border border-gray-300 text-gray-700 hover:bg-gray-50 font-medium py-3 px-4 rounded-lg transition-colors flex items-center justify-center gap-2"
+              >
+                <ArrowRightIcon className="h-5 w-5" />
+                Continuar Navegando
+              </button>
+            </div>
+
+            {/* Mensagem adicional */}
+            <p className="text-xs text-gray-500 text-center mt-4">
+              Você pode editar seu pedido a qualquer momento no carrinho
+            </p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

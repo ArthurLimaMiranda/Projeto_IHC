@@ -166,7 +166,7 @@ export default function KitsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-rose-50">
+    <div className="min-h-screen bg-[#FFFFF4]">
       <Header />
 
       <main className="pb-8">

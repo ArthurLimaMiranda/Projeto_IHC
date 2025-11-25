@@ -16,7 +16,7 @@ export function Header() {
   const isNotHome = pathname !== "/pt";
 
   return (
-    <header className="bg-white shadow-sm">
+    <header className="bg-[#FFFFF4] shadow-sm">
       <div className="max-w-6xl mx-auto px-4">
         <div className="flex items-center justify-between h-16">
           {/* Botão Voltar - só aparece se não estiver na home */}
