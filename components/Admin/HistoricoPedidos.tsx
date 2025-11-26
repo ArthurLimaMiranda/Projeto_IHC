@@ -41,6 +41,9 @@ interface DragInfo {
 export default function HistoricoPedidosPage() {
   const router = useRouter();
   const [orders, setOrders] = useState<FormattedOrder[]>([]);
+  const [search, setSearch] = useState("");
+  const [filterStatus, setFilterStatus] = useState("ALL");
+
   const pendRef = useRef<HTMLDivElement>(null);
   const [pendWidth, setPendWidth] = useState(0);
   const [pendIndex, setPendIndex] = useState(0);
@@ -49,54 +52,67 @@ export default function HistoricoPedidosPage() {
   useEffect(() => {
     const carregarPedidos = () => {
       try {
-        const savedOrders = JSON.parse(localStorage.getItem('juju-orders') || '[]');
-        
+        const savedOrders = JSON.parse(localStorage.getItem("juju-orders") || "[]");
+
         const formattedOrders: FormattedOrder[] = savedOrders.map((order: any) => ({
           id: order.id,
           client: order.customer.name,
           deliveryDate: formatarDataEntrega(order.estimatedDelivery),
           price: order.total,
-          description: order.items.map((item: any) => item.name).join(', '),
-          image: order.items[0]?.image || 'https://picsum.photos/200?4',
+          description: order.items.map((item: any) => item.name).join(", "),
+          image: order.items[0]?.image || "https://picsum.photos/200?4",
           status: order.status,
-          orderData: order
+          orderData: order,
         }));
 
-        // Ordenar por data de entrega (mais recente primeiro)
-        formattedOrders.sort((a: FormattedOrder, b: FormattedOrder) => 
-          new Date(b.orderData.estimatedDelivery).getTime() - new Date(a.orderData.estimatedDelivery).getTime()
+        formattedOrders.sort(
+          (a: FormattedOrder, b: FormattedOrder) =>
+            new Date(b.orderData.estimatedDelivery).getTime() -
+            new Date(a.orderData.estimatedDelivery).getTime()
         );
-        
+
         setOrders(formattedOrders);
       } catch (error) {
-        console.error('Erro ao carregar pedidos:', error);
+        console.error("Erro ao carregar pedidos:", error);
       }
     };
 
     carregarPedidos();
-    
-    // Listen for storage changes
+
     const handleStorageChange = () => carregarPedidos();
-    window.addEventListener('storage', handleStorageChange);
-    
-    return () => window.removeEventListener('storage', handleStorageChange);
+    window.addEventListener("storage", handleStorageChange);
+
+    return () => window.removeEventListener("storage", handleStorageChange);
   }, []);
 
   const formatarDataEntrega = (dataISO: string): string => {
     const data = new Date(dataISO);
-    return data.toLocaleDateString('pt-BR', {
-      day: '2-digit',
-      month: '2-digit',
-      year: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit'
+    return data.toLocaleDateString("pt-BR", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
     });
   };
 
   // --------------------------------------------------------
-  // PENDINGS CAROUSEL (horizontal)
+  // FILTRO + BUSCA
   // --------------------------------------------------------
-  // Recalcular width quando orders mudarem
+  const filteredOrders = orders.filter((order) => {
+    const matchesSearch =
+      order.id.toLowerCase().includes(search.toLowerCase()) ||
+      order.client.toLowerCase().includes(search.toLowerCase()) ||
+      order.description.toLowerCase().includes(search.toLowerCase());
+
+    const matchesStatus = filterStatus === "ALL" || order.status === filterStatus;
+
+    return matchesSearch && matchesStatus;
+  });
+
+  // --------------------------------------------------------
+  // PENDINGS CAROUSEL
+  // --------------------------------------------------------
   useEffect(() => {
     const update = () => {
       if (pendRef.current) {
@@ -108,28 +124,26 @@ export default function HistoricoPedidosPage() {
     return () => window.removeEventListener("resize", update);
   }, [orders]);
 
-  // Pedidos pendentes para o carrossel
   const pendingDeliveries: PendingDelivery[] = orders
-    .filter(order => order.status !== "DELIVERED")
-    .map(order => ({
+    .filter((order) => order.status !== "DELIVERED")
+    .map((order) => ({
       id: order.id,
       title: order.description,
       date: order.deliveryDate,
       image: order.image,
-      status: order.status
+      status: order.status,
     }));
 
-  // Ajustar índice quando pendingDeliveries mudar
   useEffect(() => {
     if (pendingDeliveries.length === 0) {
       setPendIndex(0);
       return;
     }
-    setPendIndex(prev => Math.min(prev, Math.max(0, pendingDeliveries.length - 1)));
+    setPendIndex((prev) => Math.min(prev, pendingDeliveries.length - 1));
   }, [pendingDeliveries.length]);
 
   const PEND_ITEM_WIDTH = 304;
-  const pendGetX = (): number => -pendIndex * PEND_ITEM_WIDTH;
+  const pendGetX = () => -pendIndex * PEND_ITEM_WIDTH;
 
   const handlePendDragEnd = (e: any, info: DragInfo) => {
     if (pendingDeliveries.length <= 1) return;
@@ -142,20 +156,22 @@ export default function HistoricoPedidosPage() {
   };
 
   const goToPend = (i: number) => setPendIndex(i);
-  const pendPrev = () => setPendIndex((p) => (p === 0 ? Math.max(0, pendingDeliveries.length - 1) : p - 1));
-  const pendNext = () => setPendIndex(p => (pendingDeliveries.length === 0 ? 0 : (p + 1) % pendingDeliveries.length));
+  const pendPrev = () =>
+    setPendIndex((p) => (p === 0 ? pendingDeliveries.length - 1 : p - 1));
+  const pendNext = () =>
+    setPendIndex((p) => (pendingDeliveries.length === 0 ? 0 : (p + 1) % pendingDeliveries.length));
 
   // --------------------------------------------------------
-  // TODOS OS PEDIDOS - vertical pagination
+  // PAGINAÇÃO
   // --------------------------------------------------------
   const ITEMS_PER_PAGE = 3;
-  const totalPages = Math.max(1, Math.ceil(orders.length / ITEMS_PER_PAGE));
+  const totalPages = Math.max(1, Math.ceil(filteredOrders.length / ITEMS_PER_PAGE));
 
   const [page, setPage] = useState(0);
   const [direction, setDirection] = useState(0);
 
   useEffect(() => {
-    setPage(prev => Math.min(prev, totalPages - 1));
+    setPage((prev) => Math.min(prev, totalPages - 1));
   }, [totalPages]);
 
   const paginate = (newDirection: number) => {
@@ -163,7 +179,7 @@ export default function HistoricoPedidosPage() {
     setPage((prev) => Math.min(Math.max(prev + newDirection, 0), totalPages - 1));
   };
 
-  const currentItems = orders.slice(
+  const currentItems = filteredOrders.slice(
     page * ITEMS_PER_PAGE,
     page * ITEMS_PER_PAGE + ITEMS_PER_PAGE
   );
@@ -175,11 +191,15 @@ export default function HistoricoPedidosPage() {
   };
 
   // --------------------------------------------------------
-  // SelectStatus - ATUALIZADO para salvar no localStorage
+  // SELECT STATUS
   // --------------------------------------------------------
-  function SelectStatus({ status, orderId, onChange }: { 
-    status: string; 
-    orderId: string; 
+  function SelectStatus({
+    status,
+    orderId,
+    onChange,
+  }: {
+    status: string;
+    orderId: string;
     onChange: (newStatus: string) => void;
   }) {
     const [open, setOpen] = useState(false);
@@ -187,18 +207,16 @@ export default function HistoricoPedidosPage() {
     const options = [
       { id: "PENDING", label: "Pendente", color: "bg-[#C9A227]" },
       { id: "PREPARING", label: "Em Produção", color: "bg-[#3BB885]" },
-      { id: "OUT_FOR_DELIVERY", label: "Saiu para Entrega", color: "bg-[#3498db]" },
       { id: "DELIVERED", label: "Entregue", color: "bg-[#B95760]" },
     ];
 
     const current = options.find((o) => o.id === status) || options[0];
 
     const handleStatusChange = (novoStatus: string) => {
-      // Atualizar no localStorage
-      const savedOrders = JSON.parse(localStorage.getItem('juju-orders') || '[]');
+      const savedOrders = JSON.parse(localStorage.getItem("juju-orders") || "[]");
       const updatedOrders = savedOrders.map((order: any) => {
         if (order.id === orderId) {
-          const updatedOrder = {
+          return {
             ...order,
             status: novoStatus,
             timeline: [
@@ -206,31 +224,29 @@ export default function HistoricoPedidosPage() {
               {
                 status: novoStatus,
                 timestamp: new Date().toISOString(),
-                description: getStatusDescription(novoStatus)
-              }
-            ]
+                description: getStatusDescription(novoStatus),
+              },
+            ],
           };
-          return updatedOrder;
         }
         return order;
       });
-      
-      localStorage.setItem('juju-orders', JSON.stringify(updatedOrders));
-      
-      // Disparar evento para outros componentes atualizarem
-      window.dispatchEvent(new Event('storage'));
-      
-      // Chamar callback
+
+      localStorage.setItem("juju-orders", JSON.stringify(updatedOrders));
+      window.dispatchEvent(new Event("storage"));
+
       onChange(novoStatus);
       setOpen(false);
     };
 
     const getStatusDescription = (status: string): string => {
       switch (status) {
-        case 'PREPARING': return 'Pedido em produção';
-        case 'OUT_FOR_DELIVERY': return 'Pedido saiu para entrega';
-        case 'DELIVERED': return 'Pedido entregue';
-        default: return 'Status atualizado';
+        case "PREPARING":
+          return "Pedido em produção";
+        case "DELIVERED":
+          return "Pedido entregue";
+        default:
+          return "Status atualizado";
       }
     };
 
@@ -252,7 +268,7 @@ export default function HistoricoPedidosPage() {
                 onClick={() => handleStatusChange(op.id)}
                 className="w-full text-left px-3 py-2 text-sm hover:bg-gray-100 flex items-center gap-2"
               >
-                <div className={`w-2 h-2 rounded-full ${op.color}`}></div>
+                <div className={`w-2 h-2 rounded-full ${op.color}`} />
                 {op.label}
               </button>
             ))}
@@ -262,6 +278,9 @@ export default function HistoricoPedidosPage() {
     );
   }
 
+  // --------------------------------------------------------
+  // UI PRINCIPAL
+  // --------------------------------------------------------
   return (
     <div className="relative flex h-auto min-h-screen w-full flex-col bg-[#FFFFF4] overflow-hidden">
       {/* TOP BAR */}
@@ -284,10 +303,15 @@ export default function HistoricoPedidosPage() {
         </div>
       </header>
 
-      {/* AVISO DA AGENDA */}
+      {/* AVISO */}
       <div className="px-4 pt-6">
         <div className="w-full bg-[#FFF5D6] border border-[#E6C27A] text-[#4F2712] rounded-xl p-4 shadow-sm flex items-start gap-3">
-          <svg className="w-6 h-6 flex-shrink-0 mt-0.5 text-[#B95760]" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+          <svg
+            className="w-6 h-6 flex-shrink-0 mt-0.5 text-[#B95760]"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+          >
             <path
               strokeLinecap="round"
               strokeLinejoin="round"
@@ -297,8 +321,13 @@ export default function HistoricoPedidosPage() {
           </svg>
 
           <p className="text-sm leading-relaxed">
-            Aqui você pode visualizar suas entregas próximas.<br />
-            Para acompanhar todos os pedidos com horários mais detalhados, acesse <Link href="/historico-pedidos/agenda" className="font-semibold">Agenda</Link>.
+            Aqui você pode visualizar suas entregas próximas.
+            <br />
+            Para acompanhar todos os pedidos com horários mais detalhados, acesse{" "}
+            <Link href="/historico-pedidos/agenda" className="font-semibold">
+              Agenda
+            </Link>
+            .
           </p>
         </div>
       </div>
@@ -317,10 +346,19 @@ export default function HistoricoPedidosPage() {
                 <button
                   onClick={pendPrev}
                   className="bg-white shadow-md p-2 rounded-full -ml-1"
-                  aria-label="Anterior"
                 >
-                  <svg className="w-5 h-5 text-[#4F2712]" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                    <path d="M15 19l-7-7 7-7" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                  <svg
+                    className="w-5 h-5 text-[#4F2712]"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                  >
+                    <path
+                      d="M15 19l-7-7 7-7"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
                   </svg>
                 </button>
               </div>
@@ -329,10 +367,19 @@ export default function HistoricoPedidosPage() {
                 <button
                   onClick={pendNext}
                   className="bg-white shadow-md p-2 rounded-full -mr-1"
-                  aria-label="Próximo"
                 >
-                  <svg className="w-5 h-5 text-[#4F2712]" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                    <path d="M9 5l7 7-7 7" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                  <svg
+                    className="w-5 h-5 text-[#4F2712]"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                  >
+                    <path
+                      d="M9 5l7 7-7 7"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
                   </svg>
                 </button>
               </div>
@@ -354,7 +401,7 @@ export default function HistoricoPedidosPage() {
               transition={{ type: "spring", stiffness: 300, damping: 30 }}
             >
               {pendingDeliveries.length > 0 ? (
-                pendingDeliveries.map((item, idx) => (
+                pendingDeliveries.map((item) => (
                   <div
                     key={item.id}
                     className="min-w-[280px] max-w-[280px] mx-3 flex-shrink-0 cursor-pointer"
@@ -366,9 +413,13 @@ export default function HistoricoPedidosPage() {
                         style={{ backgroundImage: `url(${item.image})` }}
                       />
                       <div>
-                        <p className="text-brand-brown text-base font-bold">Pedido {item.id}</p>
+                        <p className="text-brand-brown text-base font-bold">
+                          Pedido {item.id}
+                        </p>
                         <p className="text-brand-brown/70 text-sm">{item.title}</p>
-                        <p className="text-brand-rose text-sm font-bold mt-1">Entrega: {item.date}</p>
+                        <p className="text-brand-rose text-sm font-bold mt-1">
+                          Entrega: {item.date}
+                        </p>
                         <p className="text-xs text-gray-500 mt-1">Status: {item.status}</p>
                       </div>
                     </div>
@@ -393,8 +444,9 @@ export default function HistoricoPedidosPage() {
                   <button
                     key={i}
                     onClick={() => goToPend(i)}
-                    aria-label={`Ir para slide ${i + 1}`}
-                    className={`h-2 rounded-full transition-all ${i === pendIndex ? "w-6 bg-[#B95760]" : "w-2 bg-[#D9D9D9]"}`}
+                    className={`h-2 rounded-full transition-all ${
+                      i === pendIndex ? "w-6 bg-[#B95760]" : "w-2 bg-[#D9D9D9]"
+                    }`}
                   />
                 ))}
               </div>
@@ -405,9 +457,38 @@ export default function HistoricoPedidosPage() {
 
       {/* TODOS OS PEDIDOS */}
       <h2 className="text-[#4F2712] text-lg font-bold px-4 pb-2 pt-4">
-        Todos os Pedidos ({orders.length})
+        Todos os Pedidos ({filteredOrders.length})
       </h2>
 
+      {/* BUSCA + FILTRO */}
+      <div className="px-4 flex flex-col gap-3 mb-4">
+        <input
+          type="text"
+          placeholder="Buscar por cliente, descrição ou ID..."
+          value={search}
+          onChange={(e) => {
+            setSearch(e.target.value);
+            setPage(0);
+          }}
+          className="w-full px-4 py-3 rounded-xl border border-gray-300 shadow-sm text-sm focus:outline-none focus:ring-2 focus:ring-[#B95760]" 
+        />
+
+        <select
+          value={filterStatus}
+          onChange={(e) => {
+            setFilterStatus(e.target.value);
+            setPage(0);
+          }}
+          className="w-full px-4 py-3 rounded-xl border border-gray-300 shadow-sm text-sm bg-white"
+        >
+          <option value="ALL">Todos os Status</option>
+          <option value="PENDING">Pendente</option>
+          <option value="PREPARING">Em Produção</option>
+          <option value="DELIVERED">Entregue</option>
+        </select>
+      </div>
+
+      {/* LISTA COM PAGINAÇÃO */}
       <div className="relative h-[520px] overflow-hidden px-4">
         <AnimatePresence initial={false} custom={direction}>
           <motion.div
@@ -429,8 +510,8 @@ export default function HistoricoPedidosPage() {
             <div className="flex flex-col gap-3 pb-16 p-4">
               {currentItems.length > 0 ? (
                 currentItems.map((order) => (
-                  <div 
-                    key={order.id} 
+                  <div
+                    key={order.id}
                     className="flex flex-col gap-3 bg-white p-3 rounded-xl shadow-md cursor-pointer hover:shadow-lg transition-shadow"
                     onClick={() => router.push(`/historico-pedidos/${order.id}`)}
                   >
@@ -455,10 +536,9 @@ export default function HistoricoPedidosPage() {
                       <ChevronRightIcon className="w-5 h-5 text-brand-brown/50 flex-shrink-0" />
                     </div>
 
-                    {/* STATUS */}
-                    <div 
+                    <div
                       className="flex items-center justify-start pt-2 pl-4 border-t border-brand-brown/10"
-                      onClick={(e) => e.stopPropagation()} // Impede o redirecionamento ao clicar no status
+                      onClick={(e) => e.stopPropagation()}
                     >
                       <SelectStatus
                         status={order.status}
@@ -486,13 +566,12 @@ export default function HistoricoPedidosPage() {
       </div>
 
       {/* PAGINADOR FIXO */}
-      {orders.length > 0 && (
+      {filteredOrders.length > 0 && (
         <div className="flex items-center justify-center gap-4 mb-20">
           <button
             className="px-3 py-1 text-lg font-bold text-brand-brown disabled:opacity-30 bg-white rounded-md shadow-sm"
             onClick={() => paginate(-1)}
             disabled={page === 0}
-            aria-label="Página anterior"
           >
             {"<"}
           </button>
@@ -505,7 +584,6 @@ export default function HistoricoPedidosPage() {
                   setDirection(i > page ? 1 : -1);
                   setPage(i);
                 }}
-                aria-label={`Ir para página ${i + 1}`}
                 className={`h-2 rounded-full transition-all ${
                   i === page ? "w-6 bg-[#B95760]" : "w-2 bg-[#D9D9D9]"
                 }`}
@@ -517,7 +595,6 @@ export default function HistoricoPedidosPage() {
             className="px-3 py-1 text-lg font-bold text-brand-brown disabled:opacity-30 bg-white rounded-md shadow-sm"
             onClick={() => paginate(1)}
             disabled={page === totalPages - 1}
-            aria-label="Próxima página"
           >
             {">"}
           </button>
@@ -525,9 +602,9 @@ export default function HistoricoPedidosPage() {
       )}
 
       {/* FAB */}
-      <button 
+      <button
         className="fixed bottom-6 right-6 flex h-16 w-16 items-center justify-center rounded-full bg-brand-rose text-white shadow-lg hover:scale-105 transition-transform"
-        onClick={() => window.location.reload()} // Recarregar para ver pedidos mais recentes
+        onClick={() => window.location.reload()}
       >
         ↻
       </button>
