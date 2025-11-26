@@ -1,11 +1,13 @@
 "use client";
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import {
   ArrowLeftIcon,
   MagnifyingGlassIcon,
   ChevronRightIcon,
   PlusIcon,
   QuestionMarkCircleIcon,
+  PencilIcon,
+  TrashIcon,
 } from "@heroicons/react/24/outline";
 import { useRouter } from "next/navigation";
 import MenuInferior from "./MenuInferior";
@@ -16,104 +18,434 @@ export default function GerenciarEstoque() {
   const [search, setSearch] = useState("");
   const [categoriaSelecionada, setCategoriaSelecionada] = useState("Todos");
 
-  const itens = [
-    { nome: "Farinha de Trigo", quantidade: "15 kg", status: "primary", categoria: "Ingredientes" },
-    { nome: "Chocolate em Pó 50%", quantidade: "2 kg", status: "low", categoria: "Ingredientes" },
-    { nome: "Caixa para Bolo (20cm)", quantidade: "35 unidades", status: "primary", categoria: "Embalagens" },
-    { nome: "Ovos", quantidade: "0 unidades", status: "out", categoria: "Ingredientes" },
-    { nome: "Leite Condensado", quantidade: "5 unidades", status: "low", categoria: "Ingredientes" },
-  ];
+// Lista persistente
+const [itens, setItens] = useState([]);
 
-  const categorias = ["Todos", "Ingredientes", "Embalagens"]; 
+// Carregar ao iniciar
+useEffect(() => {
+  const saved = localStorage.getItem("estoque");
 
+  if (saved) {
+    setItens(JSON.parse(saved));
+  } else {
+    // Carrega itens padrão apenas na primeira vez
+    const itensPadrao = [
+      { id: 1, nome: "Farinha de Trigo", quantidade: "15 kg", status: "primary", categoria: "Ingredientes" },
+      { id: 2, nome: "Chocolate em Pó 50%", quantidade: "2 kg", status: "low", categoria: "Ingredientes" },
+      { id: 3, nome: "Caixa para Bolo (20cm)", quantidade: "35 unidades", status: "primary", categoria: "Embalagens" },
+      { id: 4, nome: "Ovos", quantidade: "0 unidades", status: "out", categoria: "Ingredientes" },
+      { id: 5, nome: "Leite Condensado", quantidade: "5 unidades", status: "low", categoria: "Ingredientes" },
+    ];
+
+    setItens(itensPadrao);
+    localStorage.setItem("estoque", JSON.stringify(itensPadrao));
+  }
+}, []);
+
+// Salvar sempre que alterar
+useEffect(() => {
+  if (itens.length > 0) {
+    localStorage.setItem("estoque", JSON.stringify(itens));
+  }
+}, [itens]);
+
+
+  const categorias = ["Todos", "Ingredientes", "Embalagens"];
+
+  // -------------------
+  // MODAL DE ADICIONAR
+  // -------------------
+  const [showModal, setShowModal] = useState(false);
+  const [novoNome, setNovoNome] = useState("");
+  const [novaQtd, setNovaQtd] = useState("");
+  const [novaCategoria, setNovaCategoria] = useState("Ingredientes");
+  const [novaUnidade, setNovaUnidade] = useState("kg");
+
+  const abrirModal = () => setShowModal(true);
+  const fecharModal = () => {
+    setShowModal(false);
+    setNovoNome("");
+    setNovaQtd("");
+    setNovaCategoria("Ingredientes");
+    setNovaUnidade("kg");
+  };
+
+  const salvarNovoItem = () => {
+    if (!novoNome.trim()) return alert("Digite um nome.");
+    if (!novaQtd.trim()) return alert("Digite a quantidade.");
+
+    setItens((old) => [
+      ...old,
+      {
+        id: Date.now(),
+        nome: novoNome,
+        quantidade: `${novaQtd} ${novaUnidade}`,
+        categoria: novaCategoria,
+        status: "primary",
+      },
+    ]);
+
+    fecharModal();
+  };
+
+  // -----------------------------------
+  // EDITAR & DELETAR (mantém como antes)
+  // -----------------------------------
+  const editarItem = (id) => {
+    const item = itens.find((i) => i.id === id);
+    if (!item) return;
+
+    const nome = prompt("Novo nome:", item.nome) ?? item.nome;
+    const quantidade = prompt("Nova quantidade:", item.quantidade) ?? item.quantidade;
+    const categoria = prompt("Categoria:", item.categoria) ?? item.categoria;
+
+    setItens((old) =>
+      old.map((i) =>
+        i.id === id ? { ...i, nome, quantidade, categoria } : i
+      )
+    );
+  };
+
+  const deletarItem = (id) => {
+    if (confirm("Tem certeza que deseja excluir?")) {
+      setItens((old) => old.filter((i) => i.id !== id));
+    }
+  };
+
+  // -------------------
+// MODAL DE EDITAR
+// -------------------
+const [showEditModal, setShowEditModal] = useState(false);
+const [editItem, setEditItem] = useState(null);
+const [editNome, setEditNome] = useState("");
+const [editQtd, setEditQtd] = useState("");
+const [editCategoria, setEditCategoria] = useState("");
+const [editUnidade, setEditUnidade] = useState("");
+
+// abrir modal editar
+const abrirModalEditar = (item) => {
+  setEditItem(item);
+  const [qtd, unidade] = item.quantidade.split(" ");
+
+  setEditNome(item.nome);
+  setEditQtd(qtd);
+  setEditCategoria(item.categoria);
+  setEditUnidade(unidade);
+  setShowEditModal(true);
+};
+
+const salvarEdicao = () => {
+  setItens((old) =>
+    old.map((i) =>
+      i.id === editItem.id
+        ? {
+            ...i,
+            nome: editNome,
+            quantidade: `${editQtd} ${editUnidade}`,
+            categoria: editCategoria,
+          }
+        : i
+    )
+  );
+  setShowEditModal(false);
+};
+
+// -------------------
+// MODAL EXCLUIR
+// -------------------
+const [showDeleteModal, setShowDeleteModal] = useState(false);
+const [deleteId, setDeleteId] = useState(null);
+
+const abrirModalExcluir = (id) => {
+  setDeleteId(id);
+  setShowDeleteModal(true);
+};
+
+const confirmarExclusao = () => {
+  setItens((old) => old.filter((i) => i.id !== deleteId));
+  setShowDeleteModal(false);
+};
+
+
+  // Filtros
   const itensFiltrados = useMemo(() => {
     return itens.filter((item) => {
-      const correspondeCategoria =
+      const catOK =
         categoriaSelecionada === "Todos" ||
         item.categoria === categoriaSelecionada;
 
-      const correspondeBusca = item.nome
-        .toLowerCase()
-        .includes(search.toLowerCase());
+      const buscaOK = item.nome.toLowerCase().includes(search.toLowerCase());
 
-      return correspondeCategoria && correspondeBusca;
+      return catOK && buscaOK;
     });
-  }, [search, categoriaSelecionada]);
+  }, [search, categoriaSelecionada, itens]);
 
   return (
-    <div className="relative flex min-h-screen w-full flex-col overflow-x-hidden bg-background-light text-text-primary">
+    <div className="relative flex min-h-screen flex-col bg-background-light text-text-primary">
 
-      {/* Top Bar */}
+      {/* Topo */}
       <header className="flex items-center bg-[#EEEDDF] p-4 pb-2 justify-between sticky top-0 z-10">
-        <div className="flex size-12 shrink-0 items-center justify-start text-text-main">
-          <ArrowLeftIcon className="w-7 h-7 cursor-pointer text-[#4F2712]"
-          onClick={() => router.back()} />
-        </div>
-
-        <h1 className="text-text-main text-lg font-bold flex-1 text-center text-[#4F2712]">
-          Gerenciar Estoque
-        </h1>
-
-        <div className="flex w-12 items-center justify-end">
-          <button className="flex h-10 w-10 items-center justify-center rounded-full bg-transparent text-text-main">
-            <QuestionMarkCircleIcon className="w-7 h-7" />
-          </button>
-        </div>
+        <ArrowLeftIcon
+          className="w-7 h-7 cursor-pointer text-[#4F2712]"
+          onClick={() => router.back()}
+        />
+        <h1 className="text-lg font-bold text-[#4F2712]">Gerenciar Estoque</h1>
+        <QuestionMarkCircleIcon className="w-7 h-7" />
       </header>
 
       {/* Conteúdo */}
       <main className="flex flex-col flex-1 px-4 pt-2 pb-24">
 
-        {/* Barra de Busca */}
+        {/* Busca */}
         <div className="py-3">
-          <label className="relative w-full block h-12">
-            <MagnifyingGlassIcon className="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-text-secondary" />
+          <label className="relative block h-12">
+            <MagnifyingGlassIcon className="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2" />
             <input
               placeholder="Buscar item..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="form-input w-full h-full rounded-lg bg-surface-muted text-text-primary placeholder:text-text-secondary pl-10 pr-3 focus:outline-0 focus:ring-0"
+              className="w-full h-full rounded-lg bg-surface-muted pl-10 pr-3"
             />
           </label>
         </div>
 
         {/* Categorias */}
-        <div className="flex gap-3 pt-1 pb-4 overflow-x-auto">
+        <div className="flex gap-3 pb-4 overflow-x-auto">
           {categorias.map((cat) => (
             <div
               key={cat}
               onClick={() => setCategoriaSelecionada(cat)}
-              className={`flex h-9 items-center justify-center px-4 rounded-full cursor-pointer whitespace-nowrap transition
-                ${categoriaSelecionada === cat ? "bg-primary text-white" : "bg-surface-muted text-text-primary"}
-              `}
+              className={`px-4 h-9 flex items-center rounded-full cursor-pointer ${
+                categoriaSelecionada === cat
+                  ? "bg-primary text-white"
+                  : "bg-surface-muted"
+              }`}
             >
-              <p className="text-sm font-medium">{cat}</p>
+              {cat}
             </div>
           ))}
         </div>
 
-        {/* Lista de Itens */}
+        {/* Lista */}
         <div className="flex flex-col gap-3">
-          {itensFiltrados.map((item, index) => (
-            <Item key={index} {...item} />
+          {itensFiltrados.map((item) => (
+            <Item
+              key={item.id}
+              {...item}
+              onEdit={() => abrirModalEditar(item)}
+              onDelete={() => abrirModalExcluir(item.id)}
+            />
           ))}
         </div>
       </main>
 
-      {/* Botão Flutuante */}
-      <div className="fixed bottom-6 right-6 z-20">
-        <button
-          aria-label="Adicionar novo item"
-          className="flex items-center justify-center size-14 bg-accent-low-stock rounded-full shadow-lg text-white"
-        >
-          <PlusIcon className="w-8 h-8" />
-        </button>
-      </div>
+      {/* Botão Adicionar */}
+      <button
+        onClick={abrirModal}
+        className="fixed bottom-6 mb-20 bg-[#34A7B2] right-6 size-14 rounded-full bg-accent-low-stock text-white flex items-center justify-center"
+      >
+        <PlusIcon className="w-8 h-8" />
+      </button>
+
+      <MenuInferior />
+
+      {/* ----------------------- */}
+      {/*      MODAL ADICIONAR     */}
+      {/* ----------------------- */}
+      {showModal && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+          <div className="bg-white w-11/12 max-w-md rounded-2xl p-5 shadow-xl">
+
+            <h2 className="text-lg font-bold mb-4">Adicionar Item</h2>
+
+            {/* Nome */}
+            <label className="block mb-3">
+              <p className="text-sm font-medium mb-1">Nome</p>
+              <input
+                className="w-full p-2 border rounded-lg"
+                value={novoNome}
+                onChange={(e) => setNovoNome(e.target.value)}
+                placeholder="Ex: Farinha de Trigo"
+              />
+            </label>
+
+            {/* Categoria */}
+            <label className="block mb-3">
+              <p className="text-sm font-medium mb-1">Categoria</p>
+              <select
+                className="w-full p-2 border rounded-lg"
+                value={novaCategoria}
+                onChange={(e) => setNovaCategoria(e.target.value)}
+              >
+                <option>Ingredientes</option>
+                <option>Embalagens</option>
+              </select>
+            </label>
+
+            {/* Quantidade */}
+            <label className="block mb-3">
+              <p className="text-sm font-medium mb-1">Quantidade</p>
+              <input
+                className="w-full p-2 border rounded-lg"
+                value={novaQtd}
+                onChange={(e) => setNovaQtd(e.target.value)}
+                placeholder="Ex: 3"
+              />
+            </label>
+
+            {/* Unidade */}
+            <label className="block mb-4">
+              <p className="text-sm font-medium mb-1">Unidade</p>
+              <select
+                className="w-full p-2 border rounded-lg"
+                value={novaUnidade}
+                onChange={(e) => setNovaUnidade(e.target.value)}
+              >
+                <option value="kg">kg</option>
+                <option value="L">L</option>
+                <option value="unidades">unidades</option>
+                <option value="g">g</option>
+                <option value="ml">ml</option>
+              </select>
+            </label>
+
+            {/* Botões */}
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={fecharModal}
+                className="px-4 py-2 rounded-lg bg-gray-300"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={salvarNovoItem}
+                className="px-4 py-2 rounded-lg bg-primary text-white"
+              >
+                Salvar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ----------------------- */}
+      {/*      MODAL EDITAR       */}
+      {/* ----------------------- */}
+      {showEditModal && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+          <div className="bg-white w-11/12 max-w-md rounded-2xl p-5 shadow-xl">
+
+            <h2 className="text-lg font-bold mb-4">Editar Item</h2>
+
+            {/* Nome */}
+            <label className="block mb-3">
+              <p className="text-sm font-medium mb-1">Nome</p>
+              <input
+                className="w-full p-2 border rounded-lg"
+                value={editNome}
+                onChange={(e) => setEditNome(e.target.value)}
+              />
+            </label>
+
+            {/* Categoria */}
+            <label className="block mb-3">
+              <p className="text-sm font-medium mb-1">Categoria</p>
+              <select
+                className="w-full p-2 border rounded-lg"
+                value={editCategoria}
+                onChange={(e) => setEditCategoria(e.target.value)}
+              >
+                <option>Ingredientes</option>
+                <option>Embalagens</option>
+              </select>
+            </label>
+
+            {/* Quantidade */}
+            <label className="block mb-3">
+              <p className="text-sm font-medium mb-1">Quantidade</p>
+              <input
+                className="w-full p-2 border rounded-lg"
+                value={editQtd}
+                onChange={(e) => setEditQtd(e.target.value)}
+              />
+            </label>
+
+            {/* Unidade */}
+            <label className="block mb-4">
+              <p className="text-sm font-medium mb-1">Unidade</p>
+              <select
+                className="w-full p-2 border rounded-lg"
+                value={editUnidade}
+                onChange={(e) => setEditUnidade(e.target.value)}
+              >
+                <option value="kg">kg</option>
+                <option value="L">L</option>
+                <option value="unidades">unidades</option>
+                <option value="g">g</option>
+                <option value="ml">ml</option>
+              </select>
+            </label>
+
+            {/* Botões */}
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => setShowEditModal(false)}
+                className="px-4 py-2 rounded-lg bg-gray-300"
+              >
+                Cancelar
+              </button>
+
+              <button
+                onClick={salvarEdicao}
+                className="px-4 py-2 rounded-lg bg-primary text-white"
+              >
+                Salvar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ----------------------- */}
+      {/*      MODAL EXCLUIR      */}
+      {/* ----------------------- */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+          <div className="bg-white w-10/12 max-w-sm p-6 rounded-xl shadow-xl">
+
+            <h2 className="text-lg font-bold text-center">Excluir item?</h2>
+            <p className="mt-3 text-center text-sm text-gray-600">
+              Esta ação não pode ser desfeita.
+            </p>
+
+            <div className="flex justify-center mt-6 gap-4">
+              <button
+                onClick={() => setShowDeleteModal(false)}
+                className="px-4 py-2 rounded-lg bg-gray-200"
+              >
+                Cancelar
+              </button>
+
+              <button
+                onClick={confirmarExclusao}
+                className="px-4 py-2 rounded-lg bg-red-500 text-white"
+              >
+                Excluir
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+
     </div>
   );
 }
 
-function Item({ nome, quantidade, status }) {
+// ---------------------
+// COMPONENTE ITEM
+// ---------------------
+function Item({ nome, quantidade, status, onEdit, onDelete }) {
   const statusColor = {
     primary: "bg-primary",
     low: "bg-accent-low-stock",
@@ -121,18 +453,23 @@ function Item({ nome, quantidade, status }) {
   }[status];
 
   return (
-    <div className="flex items-center gap-4 bg-surface p-3 rounded-xl cursor-pointer shadow-sm">
+    <div className="flex items-center gap-4 bg-surface p-3 rounded-xl shadow-sm">
       <div className={`w-1.5 h-12 rounded-full ${statusColor}`} />
 
       <div className="flex flex-col flex-1">
-        <p className="text-base font-medium line-clamp-1">{nome}</p>
-        <p className="text-sm text-text-secondary line-clamp-2">{quantidade}</p>
+        <p className="font-medium">{nome}</p>
+        <p className="text-sm text-text-secondary">{quantidade}</p>
       </div>
 
-      <div className="shrink-0 text-text-secondary flex size-7 items-center justify-center">
-        <ChevronRightIcon className="w-5 h-5" />
-      </div>
-       <MenuInferior />
+      <button onClick={onEdit} className="text-blue-500">
+        <PencilIcon className="w-6 h-6" />
+      </button>
+
+      <button onClick={onDelete} className="text-red-500">
+        <TrashIcon className="w-6 h-6" />
+      </button>
+
+      <ChevronRightIcon className="w-5 h-5 text-text-secondary" />
     </div>
   );
 }
