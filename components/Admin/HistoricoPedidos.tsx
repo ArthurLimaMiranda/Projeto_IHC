@@ -10,6 +10,7 @@ import {
   CheckCircleIcon,
   ChevronDownIcon,
   QuestionMarkCircleIcon,
+  CakeIcon,
 } from "@heroicons/react/24/outline";
 
 import { useRouter } from "next/navigation";
@@ -19,21 +20,55 @@ export default function HistoricoPedidosPage() {
   const router = useRouter();
 
   // --------------------------------------------------------
-  // MOCK DATA (constante inicial)
+  // STATE: orders é a fonte da verdade - agora busca do localStorage
   // --------------------------------------------------------
-  const initialOrders = [
-    { id: 1020, client: "João", deliveryDate: "20/12/23", price: 150.0, description: "Bolo grande com recheio de chocolate", image: "https://picsum.photos/200?4", status: "em-producao" },
-    { id: 1021, client: "Maria", deliveryDate: "18/12/23", price: 230.0, description: "50 cupcakes personalizados", image: "https://picsum.photos/200?5", status: "concluido" },
-    { id: 1022, client: "Ana", deliveryDate: "15/12/23", price: 90.0, description: "Kit festa simples", image: "https://picsum.photos/200?6", status: "entregue" },
-    { id: 1023, client: "Ricardo", deliveryDate: "12/12/23", price: 180.0, description: "Mini kit festa", image: "https://picsum.photos/200?7", status: "concluido" },
-    { id: 1024, client: "Bruna", deliveryDate: "10/12/23", price: 260.0, description: "Bolo 3 andares", image: "https://picsum.photos/200?8", status: "entregue" },
-    { id: 1025, client: "Clara", deliveryDate: "08/12/23", price: 110.0, description: "Bolo simples", image: "https://picsum.photos/200?9", status: "entregue" },
-  ];
+  const [orders, setOrders] = useState([]);
 
-  // --------------------------------------------------------
-  // STATE: orders é a fonte da verdade
-  // --------------------------------------------------------
-  const [orders, setOrders] = useState(initialOrders);
+  // Carregar pedidos do localStorage
+  useEffect(() => {
+    const carregarPedidos = () => {
+      try {
+        const savedOrders = JSON.parse(localStorage.getItem('juju-orders') || '[]');
+        
+        const formattedOrders = savedOrders.map(order => ({
+          id: order.id,
+          client: order.customer.name,
+          deliveryDate: formatarDataEntrega(order.estimatedDelivery),
+          price: order.total,
+          description: order.items.map(item => item.name).join(', '),
+          image: order.items[0]?.image || 'https://picsum.photos/200?4',
+          status: order.status,
+          orderData: order // Manter dados completos para referência
+        }));
+
+        // Ordenar por data de entrega (mais recente primeiro)
+        formattedOrders.sort((a, b) => new Date(b.orderData.estimatedDelivery) - new Date(a.orderData.estimatedDelivery));
+        
+        setOrders(formattedOrders);
+      } catch (error) {
+        console.error('Erro ao carregar pedidos:', error);
+      }
+    };
+
+    carregarPedidos();
+    
+    // Listen for storage changes
+    const handleStorageChange = () => carregarPedidos();
+    window.addEventListener('storage', handleStorageChange);
+    
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, []);
+
+  const formatarDataEntrega = (dataISO) => {
+    const data = new Date(dataISO);
+    return data.toLocaleDateString('pt-BR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
 
   // --------------------------------------------------------
   // PENDINGS CAROUSEL (horizontal)
@@ -42,30 +77,30 @@ export default function HistoricoPedidosPage() {
   const [pendWidth, setPendWidth] = useState(0);
   const [pendIndex, setPendIndex] = useState(0);
 
-  // recalcula pendWidth quando o container ou orders mudam
+  // Recalcular width quando orders mudarem
   useEffect(() => {
     const update = () => {
       if (pendRef.current) {
-        // @ts-ignore
         setPendWidth(Math.max(0, pendRef.current.scrollWidth - pendRef.current.offsetWidth));
       }
     };
     update();
     window.addEventListener("resize", update);
     return () => window.removeEventListener("resize", update);
-  }, [orders]); // <- depende de orders para recalcular caso a lista de pendentes mude
+  }, [orders]);
 
-  // derive pendingDeliveries a partir de orders (não mais allOrders)
+  // Pedidos pendentes para o carrossel
   const pendingDeliveries = orders
-    .filter(order => order.status !== "concluido" && order.status !== "entregue")
+    .filter(order => order.status !== "DELIVERED")
     .map(order => ({
       id: order.id,
       title: order.description,
       date: order.deliveryDate,
-      image: order.image
+      image: order.image,
+      status: order.status
     }));
 
-  // quando pendingDeliveries mudar, garanta pendIndex válido
+  // Ajustar índice quando pendingDeliveries mudar
   useEffect(() => {
     if (pendingDeliveries.length === 0) {
       setPendIndex(0);
@@ -74,17 +109,15 @@ export default function HistoricoPedidosPage() {
     setPendIndex(prev => Math.min(prev, Math.max(0, pendingDeliveries.length - 1)));
   }, [pendingDeliveries.length]);
 
-  const PEND_ITEM_WIDTH = 304; // largura estimada (min-w + margin)
+  const PEND_ITEM_WIDTH = 304;
   const pendGetX = () => -pendIndex * PEND_ITEM_WIDTH;
 
   const handlePendDragEnd = (e, info) => {
     if (pendingDeliveries.length <= 1) return;
     const threshold = 80;
     if (info.offset.x > threshold) {
-      // swipe direito -> anterior
       setPendIndex((prev) => (prev === 0 ? pendingDeliveries.length - 1 : prev - 1));
     } else if (info.offset.x < -threshold) {
-      // swipe esquerdo -> próximo
       setPendIndex((prev) => (prev + 1) % pendingDeliveries.length);
     }
   };
@@ -94,7 +127,7 @@ export default function HistoricoPedidosPage() {
   const pendNext = () => setPendIndex(p => (pendingDeliveries.length === 0 ? 0 : (p + 1) % pendingDeliveries.length));
 
   // --------------------------------------------------------
-  // TODOS OS PEDIDOS - vertical pagination (ITEMS_PER_PAGE)
+  // TODOS OS PEDIDOS - vertical pagination
   // --------------------------------------------------------
   const ITEMS_PER_PAGE = 3;
   const totalPages = Math.max(1, Math.ceil(orders.length / ITEMS_PER_PAGE));
@@ -102,7 +135,6 @@ export default function HistoricoPedidosPage() {
   const [page, setPage] = useState(0);
   const [direction, setDirection] = useState(0);
 
-  // Se orders mudar e reduzir o número de páginas, ajustar page
   useEffect(() => {
     setPage(prev => Math.min(prev, totalPages - 1));
   }, [totalPages]);
@@ -112,13 +144,11 @@ export default function HistoricoPedidosPage() {
     setPage((prev) => Math.min(Math.max(prev + newDirection, 0), totalPages - 1));
   };
 
-  // derive currentItems a partir de orders (não mais allOrders)
   const currentItems = orders.slice(
     page * ITEMS_PER_PAGE,
     page * ITEMS_PER_PAGE + ITEMS_PER_PAGE
   );
 
-  // variants para slide vertical (mantive igual)
   const variants = {
     enter: (dir) => ({ y: dir > 0 ? 300 : -300, opacity: 0 }),
     center: { y: 0, opacity: 1 },
@@ -126,22 +156,63 @@ export default function HistoricoPedidosPage() {
   };
 
   // --------------------------------------------------------
-  // SelectStatus (comportamento: atualiza orders via onChange)
+  // SelectStatus - ATUALIZADO para salvar no localStorage
   // --------------------------------------------------------
-  function SelectStatus({ status, onChange }) {
+  function SelectStatus({ status, orderId, onChange }) {
     const [open, setOpen] = useState(false);
 
     const options = [
-      { id: "em-producao", label: "Em Produção", color: "bg-[#C9A227]" },
-      { id: "concluido", label: "Concluído", color: "bg-[#3BB885]" },
-      { id: "entregue", label: "Entregue", color: "bg-[#B95760]" },
+      { id: "PENDING", label: "Pendente", color: "bg-[#C9A227]" },
+      { id: "PREPARING", label: "Em Produção", color: "bg-[#3BB885]" },
+      { id: "OUT_FOR_DELIVERY", label: "Saiu para Entrega", color: "bg-[#3498db]" },
+      { id: "DELIVERED", label: "Entregue", color: "bg-[#B95760]" },
     ];
 
     const current = options.find((o) => o.id === status) || options[0];
 
+    const handleStatusChange = (novoStatus) => {
+      // Atualizar no localStorage
+      const savedOrders = JSON.parse(localStorage.getItem('juju-orders') || '[]');
+      const updatedOrders = savedOrders.map(order => {
+        if (order.id === orderId) {
+          const updatedOrder = {
+            ...order,
+            status: novoStatus,
+            timeline: [
+              ...order.timeline,
+              {
+                status: novoStatus,
+                timestamp: new Date().toISOString(),
+                description: getStatusDescription(novoStatus)
+              }
+            ]
+          };
+          return updatedOrder;
+        }
+        return order;
+      });
+      
+      localStorage.setItem('juju-orders', JSON.stringify(updatedOrders));
+      
+      // Disparar evento para outros componentes atualizarem
+      window.dispatchEvent(new Event('storage'));
+      
+      // Chamar callback
+      onChange(novoStatus);
+      setOpen(false);
+    };
+
+    const getStatusDescription = (status) => {
+      switch (status) {
+        case 'PREPARING': return 'Pedido em produção';
+        case 'OUT_FOR_DELIVERY': return 'Pedido saiu para entrega';
+        case 'DELIVERED': return 'Pedido entregue';
+        default: return 'Status atualizado';
+      }
+    };
+
     return (
       <div className="relative">
-        {/* BOTÃO PRINCIPAL */}
         <button
           onClick={() => setOpen(!open)}
           className={`flex items-center gap-2 px-3 py-1 rounded-full text-sm font-medium text-white ${current.color}`}
@@ -150,18 +221,15 @@ export default function HistoricoPedidosPage() {
           <ChevronDownIcon className="w-4 h-4" />
         </button>
 
-        {/* MENU DROPDOWN */}
         {open && (
-          <div className="absolute left-0 mt-2 z-50 bg-white border rounded-xl shadow-xl w-40">
+          <div className="absolute left-0 mt-2 z-50 bg-white border rounded-xl shadow-xl w-48">
             {options.map((op) => (
               <button
                 key={op.id}
-                onClick={() => {
-                  onChange(op.id);
-                  setOpen(false);
-                }}
-                className="w-full text-left px-3 py-2 text-sm hover:bg-gray-100"
+                onClick={() => handleStatusChange(op.id)}
+                className="w-full text-left px-3 py-2 text-sm hover:bg-gray-100 flex items-center gap-2"
               >
+                <div className={`w-2 h-2 rounded-full ${op.color}`}></div>
                 {op.label}
               </button>
             ))}
@@ -196,9 +264,7 @@ export default function HistoricoPedidosPage() {
         </div>
       </header>
 
-      {/* --------------------------------------------------------
-         ENTREGAS PENDENTES — CARROSSEL HORIZONTAL (drag + arrows + dots)
-      --------------------------------------------------------- */}
+      {/* ENTREGAS PENDENTES */}
       <h2 className="text-lg font-bold px-4 pb-2 pt-6 text-[#4F2712]">
         Próximas Entregas
       </h2>
@@ -206,29 +272,33 @@ export default function HistoricoPedidosPage() {
       <div className="px-4">
         <div className="relative">
           {/* arrows */}
-          <div className="absolute left-0 top-1/2 -translate-y-1/2 z-20">
-            <button
-              onClick={pendPrev}
-              className="bg-white shadow-md p-2 rounded-full -ml-1"
-              aria-label="Anterior"
-            >
-              <svg className="w-5 h-5 text-[#4F2712]" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                <path d="M15 19l-7-7 7-7" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            </button>
-          </div>
+          {pendingDeliveries.length > 0 && (
+            <>
+              <div className="absolute left-0 top-1/2 -translate-y-1/2 z-20">
+                <button
+                  onClick={pendPrev}
+                  className="bg-white shadow-md p-2 rounded-full -ml-1"
+                  aria-label="Anterior"
+                >
+                  <svg className="w-5 h-5 text-[#4F2712]" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <path d="M15 19l-7-7 7-7" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                </button>
+              </div>
 
-          <div className="absolute right-0 top-1/2 -translate-y-1/2 z-20">
-            <button
-              onClick={pendNext}
-              className="bg-white shadow-md p-2 rounded-full -mr-1"
-              aria-label="Próximo"
-            >
-              <svg className="w-5 h-5 text-[#4F2712]" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                <path d="M9 5l7 7-7 7" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            </button>
-          </div>
+              <div className="absolute right-0 top-1/2 -translate-y-1/2 z-20">
+                <button
+                  onClick={pendNext}
+                  className="bg-white shadow-md p-2 rounded-full -mr-1"
+                  aria-label="Próximo"
+                >
+                  <svg className="w-5 h-5 text-[#4F2712]" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <path d="M9 5l7 7-7 7" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                </button>
+              </div>
+            </>
+          )}
 
           {/* carrossel */}
           <motion.div
@@ -244,52 +314,62 @@ export default function HistoricoPedidosPage() {
               animate={{ x: pendGetX() }}
               transition={{ type: "spring", stiffness: 300, damping: 30 }}
             >
-              {pendingDeliveries.map((item, idx) => (
-                <div
-                  key={item.id}
-                  className="min-w-[280px] max-w-[280px] mx-3 flex-shrink-0"
-                >
-                  <div className="flex flex-col gap-3 rounded-lg bg-white p-3 shadow-sm border border-[#B95760]">
-                    <div
-                      className="w-full aspect-video rounded-lg overflow-hidden bg-cover bg-center"
-                      style={{ backgroundImage: `url(${item.image})` }}
-                    />
-                    <div>
-                      <p className="text-brand-brown text-base font-bold">Pedido #{item.id}</p>
-                      <p className="text-brand-brown/70 text-sm">{item.title}</p>
-                      <p className="text-brand-rose text-sm font-bold mt-1">Entrega: {item.date}</p>
+              {pendingDeliveries.length > 0 ? (
+                pendingDeliveries.map((item, idx) => (
+                  <div
+                    key={item.id}
+                    className="min-w-[280px] max-w-[280px] mx-3 flex-shrink-0 cursor-pointer"
+                    onClick={() => router.push(`/historico-pedidos/${item.id}`)}
+                  >
+                    <div className="flex flex-col gap-3 rounded-lg bg-white p-3 shadow-sm border border-[#B95760] hover:shadow-lg transition-shadow">
+                      <div
+                        className="w-full aspect-video rounded-lg overflow-hidden bg-cover bg-center"
+                        style={{ backgroundImage: `url(${item.image})` }}
+                      />
+                      <div>
+                        <p className="text-brand-brown text-base font-bold">Pedido {item.id}</p>
+                        <p className="text-brand-brown/70 text-sm">{item.title}</p>
+                        <p className="text-brand-rose text-sm font-bold mt-1">Entrega: {item.date}</p>
+                        <p className="text-xs text-gray-500 mt-1">Status: {item.status}</p>
+                      </div>
                     </div>
                   </div>
+                ))
+              ) : (
+                <div className="min-w-[280px] max-w-[280px] mx-3 flex-shrink-0">
+                  <div className="flex flex-col gap-3 rounded-lg bg-white p-6 text-center">
+                    <CakeIcon className="h-12 w-12 mx-auto text-gray-300" />
+                    <p className="text-gray-500">Nenhuma entrega pendente</p>
+                  </div>
                 </div>
-              ))}
+              )}
             </motion.div>
           </motion.div>
 
           {/* dots */}
-          <div className="flex justify-center mt-3">
-            <div className="flex gap-2">
-              {pendingDeliveries.map((_, i) => (
-                <button
-                  key={i}
-                  onClick={() => goToPend(i)}
-                  aria-label={`Ir para slide ${i + 1}`}
-                  className={`h-2 rounded-full transition-all ${i === pendIndex ? "w-6 bg-[#B95760]" : "w-2 bg-[#D9D9D9]"}`}
-                />
-              ))}
+          {pendingDeliveries.length > 0 && (
+            <div className="flex justify-center mt-3">
+              <div className="flex gap-2">
+                {pendingDeliveries.map((_, i) => (
+                  <button
+                    key={i}
+                    onClick={() => goToPend(i)}
+                    aria-label={`Ir para slide ${i + 1}`}
+                    className={`h-2 rounded-full transition-all ${i === pendIndex ? "w-6 bg-[#B95760]" : "w-2 bg-[#D9D9D9]"}`}
+                  />
+                ))}
+              </div>
             </div>
-          </div>
+          )}
         </div>
       </div>
 
-      {/* --------------------------------------------------------
-        TODOS OS PEDIDOS — LISTA VERTICAL PAGINADA (slide vertical)
-      --------------------------------------------------------- */}
+      {/* TODOS OS PEDIDOS */}
       <h2 className="text-[#4F2712] text-lg font-bold px-4 pb-2 pt-4">
-        Todos os Pedidos
+        Todos os Pedidos ({orders.length})
       </h2>
 
       <div className="relative h-[520px] overflow-hidden px-4">
-        {/* CONTAINER ANIMADO */}
         <AnimatePresence initial={false} custom={direction}>
           <motion.div
             key={page}
@@ -302,96 +382,115 @@ export default function HistoricoPedidosPage() {
             drag="y"
             dragConstraints={{ top: 0, bottom: 0 }}
             onDragEnd={(e, info) => {
-              if (info.offset.y < -120) paginate(1);     // arrastou para cima → próxima página
-              else if (info.offset.y > 120) paginate(-1); // arrastou para baixo → volta página
+              if (info.offset.y < -120) paginate(1);
+              else if (info.offset.y > 120) paginate(-1);
             }}
             className="absolute top-0 left-0 w-full"
           >
             <div className="flex flex-col gap-3 pb-16 p-4">
-              {currentItems.map((order) => (
-                <div key={order.id} className="flex flex-col gap-3 bg-white p-3 rounded-xl shadow-md">
-                  <div className="flex items-center justify-between ">
-                    <div className="flex items-center gap-4">
-                      <div
-                        className="size-16 rounded-lg bg-cover bg-center"
-                        style={{ backgroundImage: `url(${order.image})` }}
-                      />
-                      <div className="flex flex-col">
-                        <p className="text-[#B95760] text-base font-bold">
-                          #{order.id} - {order.client}
-                        </p>
-                        <p className="text-brand-brown/70 text-sm">
-                          Entrega: {order.deliveryDate} - R$ {order.price}
-                        </p>
-                        <p className="text-brand-brown/70 text-sm truncate max-w-48">
-                          {order.description}
-                        </p>
+              {currentItems.length > 0 ? (
+                currentItems.map((order) => (
+                  <div 
+                    key={order.id} 
+                    className="flex flex-col gap-3 bg-white p-3 rounded-xl shadow-md cursor-pointer hover:shadow-lg transition-shadow"
+                    onClick={() => router.push(`/historico-pedidos/${order.id}`)}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-4 flex-1">
+                        <div
+                          className="size-16 rounded-lg bg-cover bg-center flex-shrink-0"
+                          style={{ backgroundImage: `url(${order.image})` }}
+                        />
+                        <div className="flex flex-col min-w-0">
+                          <p className="text-[#B95760] text-base font-bold truncate">
+                            #{order.id} - {order.client}
+                          </p>
+                          <p className="text-brand-brown/70 text-sm">
+                            Entrega: {order.deliveryDate} - R$ {order.price.toFixed(2)}
+                          </p>
+                          <p className="text-brand-brown/70 text-sm truncate">
+                            {order.description}
+                          </p>
+                        </div>
                       </div>
+                      <ChevronRightIcon className="w-5 h-5 text-brand-brown/50 flex-shrink-0" />
                     </div>
 
-                    <ChevronRightIcon className="w-5 h-5 text-brand-brown/50" />
+                    {/* STATUS */}
+                    <div 
+                      className="flex items-center justify-start pt-2 pl-4 border-t border-brand-brown/10"
+                      onClick={(e) => e.stopPropagation()} // Impede o redirecionamento ao clicar no status
+                    >
+                      <SelectStatus
+                        status={order.status}
+                        orderId={order.id}
+                        onChange={(novoStatus) => {
+                          setOrders((prev) =>
+                            prev.map((o) =>
+                              o.id === order.id ? { ...o, status: novoStatus } : o
+                            )
+                          );
+                        }}
+                      />
+                    </div>
                   </div>
-
-                  {/* STATUS */}
-                  <div className="flex items-center justify-start pt-2 pl-4 border-t border-brand-brown/10">
-                    <SelectStatus
-                      status={order.status}
-                      onChange={(novoStatus) => {
-                        setOrders((prev) =>
-                          prev.map((o) =>
-                            o.id === order.id ? { ...o, status: novoStatus } : o
-                          )
-                        );
-                      }}
-                    />
-                  </div>
+                ))
+              ) : (
+                <div className="text-center py-8 text-gray-500">
+                  <CakeIcon className="h-12 w-12 mx-auto mb-2 text-gray-300" />
+                  <p>Nenhum pedido encontrado</p>
                 </div>
-              ))}
+              )}
             </div>
           </motion.div>
         </AnimatePresence>
       </div>
 
-    {/* PAGINADOR FIXO — SEMPRE VISÍVEL */}
-    <div className="flex items-center justify-center gap-4 mb-20">
-      <button
-        className="px-3 py-1 text-lg font-bold text-brand-brown disabled:opacity-30 bg-white rounded-md shadow-sm"
-        onClick={() => paginate(-1)}
-        disabled={page === 0}
-        aria-label="Página anterior"
-      >
-        {"<"}
-      </button>
-
-      <div className="flex gap-2">
-        {Array.from({ length: totalPages }).map((_, i) => (
+      {/* PAGINADOR FIXO */}
+      {orders.length > 0 && (
+        <div className="flex items-center justify-center gap-4 mb-20">
           <button
-            key={i}
-            onClick={() => {
-              setDirection(i > page ? 1 : -1);
-              setPage(i);
-            }}
-            aria-label={`Ir para página ${i + 1}`}
-            className={`h-2 rounded-full transition-all ${
-              i === page ? "w-6 bg-[#B95760]" : "w-2 bg-[#D9D9D9]"
-            }`}
-          />
-        ))}
-      </div>
+            className="px-3 py-1 text-lg font-bold text-brand-brown disabled:opacity-30 bg-white rounded-md shadow-sm"
+            onClick={() => paginate(-1)}
+            disabled={page === 0}
+            aria-label="Página anterior"
+          >
+            {"<"}
+          </button>
 
-      <button
-        className="px-3 py-1 text-lg font-bold text-brand-brown disabled:opacity-30 bg-white rounded-md shadow-sm"
-        onClick={() => paginate(1)}
-        disabled={page === totalPages - 1}
-        aria-label="Próxima página"
-      >
-        {">"}
-      </button>
-    </div>
+          <div className="flex gap-2">
+            {Array.from({ length: totalPages }).map((_, i) => (
+              <button
+                key={i}
+                onClick={() => {
+                  setDirection(i > page ? 1 : -1);
+                  setPage(i);
+                }}
+                aria-label={`Ir para página ${i + 1}`}
+                className={`h-2 rounded-full transition-all ${
+                  i === page ? "w-6 bg-[#B95760]" : "w-2 bg-[#D9D9D9]"
+                }`}
+              />
+            ))}
+          </div>
+
+          <button
+            className="px-3 py-1 text-lg font-bold text-brand-brown disabled:opacity-30 bg-white rounded-md shadow-sm"
+            onClick={() => paginate(1)}
+            disabled={page === totalPages - 1}
+            aria-label="Próxima página"
+          >
+            {">"}
+          </button>
+        </div>
+      )}
 
       {/* FAB */}
-      <button className="fixed bottom-6 right-6 flex h-16 w-16 items-center justify-center rounded-full bg-brand-rose text-white shadow-lg hover:scale-105 transition-transform">
-        +
+      <button 
+        className="fixed bottom-6 right-6 flex h-16 w-16 items-center justify-center rounded-full bg-brand-rose text-white shadow-lg hover:scale-105 transition-transform"
+        onClick={() => window.location.reload()} // Recarregar para ver pedidos mais recentes
+      >
+        ↻
       </button>
 
       <MenuInferior />
