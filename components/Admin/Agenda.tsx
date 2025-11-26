@@ -12,7 +12,7 @@ import {
 import MenuInferior from "@/components/Admin/MenuInferior";
 import { useRouter } from "next/navigation";
 import { QuestionMarkCircleIcon } from "@heroicons/react/24/outline";
-import { useCart } from "@/contexts/CartContext";
+import { useCart, Order } from "@/contexts/CartContext";
 
 // ----------------------------------------------------------------------
 // CONSTANTES
@@ -26,15 +26,33 @@ const monthNames = [
 ];
 
 // ----------------------------------------------------------------------
+// TIPOS E INTERFACES
+// ----------------------------------------------------------------------
+
+interface AgendaEvent {
+  id: string;
+  date: string;
+  title: string;
+  description: string;
+  status: string;
+  time: string;
+  order: Order;
+  customerName: string;
+  address: string;
+  phone: string;
+  total: number;
+}
+
+// ----------------------------------------------------------------------
 // HELPERS
 // ----------------------------------------------------------------------
 
-function getMonthMatrix(year, month) {
+function getMonthMatrix(year: number, month: number) {
   const firstDay = new Date(year, month, 1).getDay();
   const daysInMonth = new Date(year, month + 1, 0).getDate();
   const prevMonthDays = new Date(year, month, 0).getDate();
 
-  const matrix = [];
+  const matrix: Array<{ num: number; dim: boolean }> = [];
   let dayCount = 1;
   let nextMonthDay = 1;
 
@@ -52,8 +70,8 @@ function getMonthMatrix(year, month) {
   return matrix;
 }
 
-function getWeekDates(selectedDay) {
-  const week = [];
+function getWeekDates(selectedDay: Date) {
+  const week: Date[] = [];
   const day = new Date(selectedDay);
   const weekday = day.getDay();
 
@@ -90,8 +108,8 @@ export default function AgendaPage() {
   const [selectedDay, setSelectedDay] = useState(today);
 
   // ➤ Eventos reais dos pedidos
-  const [events, setEvents] = useState([]);
-  const [todayEvents, setTodayEvents] = useState([]);
+  const [events, setEvents] = useState<AgendaEvent[]>([]);
+  const [todayEvents, setTodayEvents] = useState<AgendaEvent[]>([]);
 
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
@@ -109,7 +127,7 @@ export default function AgendaPage() {
         const orders = getAllOrders();
         
         // Transformar pedidos em eventos para a agenda
-        const eventsFromOrders = orders.map(order => {
+        const eventsFromOrders: AgendaEvent[] = orders.map(order => {
           const deliveryDate = new Date(order.estimatedDelivery);
           const dateKey = deliveryDate.toISOString().split("T")[0];
           
@@ -150,18 +168,17 @@ export default function AgendaPage() {
     return () => window.removeEventListener('storage', handleStorageChange);
   }, [getAllOrders, selectedDay]);
 
-  const getEventStatus = (orderStatus) => {
+  const getEventStatus = (orderStatus: Order['status']): string => {
     switch (orderStatus) {
       case 'PENDING': return "pending";
       case 'PREPARING': return "pending";
       case 'OUT_FOR_DELIVERY': return "pending";
       case 'DELIVERED': return "completed";
-      case 'CANCELLED': return "block";
       default: return "pending";
     }
   };
 
-  const getStatusColor = (status) => {
+  const getStatusColor = (status: Order['status']): string => {
     switch (status) {
       case 'PENDING': return 'bg-orange-500';
       case 'PREPARING': return 'bg-yellow-500';
@@ -171,7 +188,7 @@ export default function AgendaPage() {
     }
   };
 
-  const getStatusText = (status) => {
+  const getStatusText = (status: Order['status']): string => {
     switch (status) {
       case 'PENDING': return 'Pendente';
       case 'PREPARING': return 'Em Produção';
@@ -213,7 +230,7 @@ export default function AgendaPage() {
   // FUNÇÕES PARA ATUALIZAR DATAS
   // ----------------------------------------------------------------------
 
-  const handleDateChange = (orderId, newDate) => {
+  const handleDateChange = (orderId: string, newDate: string) => {
     const success = updateOrderDeliveryDate(orderId, newDate);
     if (success) {
       // A atualização será refletida automaticamente pelo event listener

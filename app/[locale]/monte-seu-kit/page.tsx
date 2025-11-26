@@ -390,10 +390,19 @@ export default function CustomizeCakeKit() {
     const selectedFrosting = frostings.find(f => f.id === selectedOptions.frosting);
     const selectedToppings = toppings.filter(t => selectedOptions.toppings.includes(t.id));
     const selectedAddOns = addOns.filter(a => selectedOptions.addOns.includes(a.id));
-    const selectedExtras = selectedOptions.extras.map(extra => {
-      const extraItem = extras.find(e => e.id === extra.id);
-      return { ...extraItem, quantity: extra.quantity };
-    });
+    
+    // CORREÇÃO: Garantir que os extras tenham name como string
+    const selectedExtras = selectedOptions.extras
+      .map(extra => {
+        const extraItem = extras.find(e => e.id === extra.id);
+        if (!extraItem) return null;
+        
+        return {
+          name: extraItem.name, // Garantir que é string
+          quantity: extra.quantity
+        };
+      })
+      .filter((extra): extra is { name: string; quantity: number } => extra !== null);
 
     let name = `Bolo de ${selectedFlavor?.name} Personalizado`;
     let description = `Sabor ${selectedFlavor?.name}`;
@@ -426,7 +435,7 @@ export default function CustomizeCakeKit() {
         frosting: selectedFrosting?.name || 'Nenhuma',
         toppings: selectedToppings.map(t => t.name),
         addOns: selectedAddOns.map(a => a.name),
-        extras: selectedExtras.map(e => ({ name: e.name, quantity: e.quantity })),
+        extras: selectedExtras, // Agora é do tipo correto
       },
       orderInfo: { ...orderInfo }
     };

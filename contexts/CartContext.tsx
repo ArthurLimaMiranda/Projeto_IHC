@@ -10,12 +10,23 @@ export interface CartItem {
   price: number;
   quantity: number;
   image: string;
-  customization?: {
+  customization: {
     flavor: string;
     frosting: string;
     toppings: string[];
     addOns: string[];
-    extras: string[];
+    extras: Array<{ name: string; quantity: number }>; // Agora é array de objetos
+  };
+  orderInfo?: {
+    customerName: string;
+    eventDate: string;
+    eventTime: string;
+    observations: string;
+    description: string;
+    themePhotoPreview: string;
+    allergies: string;
+    lactoseIntolerant: boolean;
+    otherRestrictions: string;
   };
 }
 

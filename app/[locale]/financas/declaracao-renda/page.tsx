@@ -1,19 +1,10 @@
-// app/financas/declaracao-renda/page.tsx - ATUALIZADA
+// app/financas/declaracao-renda/page.tsx - CORRIGIDA
 "use client";
 
 import React, { useState, useEffect } from "react";
 import {
   ArrowLeftIcon,
-  UserIcon,
-  IdentificationIcon,
-  EnvelopeIcon,
-  PhoneIcon,
-  HomeIcon,
-  BuildingOfficeIcon,
-  CakeIcon,
-  GlobeAltIcon,
   QuestionMarkCircleIcon,
-  CalendarIcon,
 } from "@heroicons/react/24/outline";
 import { useRouter } from "next/navigation";
 import MenuInferior from "@/components/Admin/MenuInferior";
@@ -38,8 +29,8 @@ export default function CadastroConfeiteira() {
     business: {
       name: "",
       productTypes: "",
-      cnpj: "",
-      cnae: ""
+      cnpj: "", // Agora como string vazia, não undefined
+      cnae: ""  // Agora como string vazia, não undefined
     },
     financial: {
       monthlyRevenue: 0,
@@ -51,11 +42,36 @@ export default function CadastroConfeiteira() {
   useEffect(() => {
     const savedData = getBusinessInfo();
     if (savedData) {
-      setFormData(savedData);
+      // Garantir que cnpj e cnae não sejam undefined
+      const safeData = {
+        personal: {
+          name: savedData.personal.name || "",
+          cpf: savedData.personal.cpf || "",
+          email: savedData.personal.email || "",
+          phone: savedData.personal.phone || ""
+        },
+        address: {
+          street: savedData.address.street || "",
+          city: savedData.address.city || "",
+          state: savedData.address.state || ""
+        },
+        business: {
+          name: savedData.business.name || "",
+          productTypes: savedData.business.productTypes || "",
+          cnpj: savedData.business.cnpj || "", // Converter undefined para string vazia
+          cnae: savedData.business.cnae || ""  // Converter undefined para string vazia
+        },
+        financial: {
+          monthlyRevenue: savedData.financial.monthlyRevenue || 0,
+          annualRevenue: savedData.financial.annualRevenue || 0,
+          additionalInfo: savedData.financial.additionalInfo || ""
+        }
+      };
+      setFormData(safeData);
     }
   }, [getBusinessInfo]);
 
-  const handleInputChange = (section: string, field: string, value: string) => {
+  const handleInputChange = (section: string, field: string, value: string | number) => {
     setFormData(prev => ({
       ...prev,
       [section]: {
@@ -66,24 +82,42 @@ export default function CadastroConfeiteira() {
   };
 
   const handleSave = () => {
-    saveBusinessInfo(formData);
+    // Converter para o formato BusinessInfo (com propriedades opcionais)
+    const businessInfoToSave = {
+      personal: formData.personal,
+      address: formData.address,
+      business: {
+        name: formData.business.name,
+        productTypes: formData.business.productTypes,
+        cnpj: formData.business.cnpj || undefined, // Converter string vazia para undefined
+        cnae: formData.business.cnae || undefined  // Converter string vazia para undefined
+      },
+      financial: formData.financial
+    };
+    
+    saveBusinessInfo(businessInfoToSave);
     alert("Informações salvas com sucesso!");
     router.back();
   };
 
-  const formatCurrency = (value: string) => {
-    // Remove caracteres não numéricos
-    const numericValue = value.replace(/\D/g, '');
-    // Converte para número e formata como moeda
-    return (Number(numericValue) / 100).toLocaleString('pt-BR', {
+  const formatCurrency = (value: number) => {
+    return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
       currency: 'BRL'
-    });
+    }).format(value);
   };
 
-  const handleCurrencyChange = (field: string, value: string) => {
+  const handleCurrencyInput = (field: 'monthlyRevenue' | 'annualRevenue', value: string) => {
+    // Remove tudo que não é número
     const numericValue = value.replace(/\D/g, '');
-    handleInputChange('financial', field, numericValue);
+    // Converte para número (dividindo por 100 para considerar centavos)
+    const amount = numericValue ? parseFloat(numericValue) / 100 : 0;
+    
+    handleInputChange('financial', field, amount);
+  };
+
+  const getCurrencyDisplayValue = (value: number) => {
+    return formatCurrency(value);
   };
 
   return (
@@ -266,8 +300,8 @@ export default function CadastroConfeiteira() {
           <input
             type="text"
             placeholder="R$ 0,00"
-            value={formatCurrency(formData.financial.monthlyRevenue.toString())}
-            onChange={(e) => handleCurrencyChange('monthlyRevenue', e.target.value)}
+            value={getCurrencyDisplayValue(formData.financial.monthlyRevenue)}
+            onChange={(e) => handleCurrencyInput('monthlyRevenue', e.target.value)}
             inputMode="decimal"
             className="w-full h-14 p-4 rounded-lg bg-white border border-gray-300 focus:ring-2 focus:ring-[#B95760] focus:border-transparent"
           />
@@ -278,8 +312,8 @@ export default function CadastroConfeiteira() {
           <input
             type="text"
             placeholder="R$ 0,00"
-            value={formatCurrency(formData.financial.annualRevenue.toString())}
-            onChange={(e) => handleCurrencyChange('annualRevenue', e.target.value)}
+            value={getCurrencyDisplayValue(formData.financial.annualRevenue)}
+            onChange={(e) => handleCurrencyInput('annualRevenue', e.target.value)}
             inputMode="decimal"
             className="w-full h-14 p-4 rounded-lg bg-white border border-gray-300 focus:ring-2 focus:ring-[#B95760] focus:border-transparent"
           />
