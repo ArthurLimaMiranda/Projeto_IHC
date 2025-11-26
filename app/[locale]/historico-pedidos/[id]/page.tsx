@@ -10,8 +10,12 @@ import {
   CalendarIcon,
   CreditCardIcon,
   ClockIcon,
-  CheckCircleIcon
+  CheckCircleIcon,
+  ChevronDownIcon,
+  TrashIcon,
+  XMarkIcon
 } from "@heroicons/react/24/outline";
+import { useCart } from "@/contexts/CartContext";
 
 interface Order {
   id: string;
@@ -54,8 +58,12 @@ interface Order {
 export default function OrderDetailsPage() {
   const params = useParams();
   const router = useRouter();
+  const { updateOrderStatus, getOrderById } = useCart();
   const [order, setOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(true);
+  const [statusOpen, setStatusOpen] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [timelineItemToDelete, setTimelineItemToDelete] = useState<number | null>(null);
 
   useEffect(() => {
     const loadOrder = () => {
@@ -74,6 +82,85 @@ export default function OrderDetailsPage() {
     window.addEventListener('storage', loadOrder);
     return () => window.removeEventListener('storage', loadOrder);
   }, [params.id]);
+
+  const handleStatusChange = async (newStatus: string) => {
+    if (!order) return;
+    
+    const success = updateOrderStatus(order.id, newStatus as any);
+    if (success) {
+      // Atualiza o estado local para refletir a mudança imediatamente
+      const updatedOrder = {
+        ...order,
+        status: newStatus,
+        timeline: [
+          ...order.timeline,
+          {
+            status: newStatus,
+            timestamp: new Date().toISOString(),
+            description: getStatusDescription(newStatus)
+          }
+        ]
+      };
+      setOrder(updatedOrder);
+      setStatusOpen(false);
+    }
+  };
+
+  const getStatusDescription = (status: string) => {
+    switch (status) {
+      case 'PENDING': return 'Pedido recebido';
+      case 'PREPARING': return 'Pedido em produção';
+      case 'OUT_FOR_DELIVERY': return 'Pedido saiu para entrega';
+      case 'DELIVERED': return 'Pedido entregue';
+      default: return 'Status atualizado';
+    }
+  };
+
+  const handleDeleteTimelineItem = (index: number) => {
+    if (!order) return;
+
+    setTimelineItemToDelete(index);
+    setShowDeleteConfirm(true);
+  };
+
+  const confirmDeleteTimelineItem = () => {
+    if (!order || timelineItemToDelete === null) return;
+
+    const newTimeline = [...order.timeline];
+    newTimeline.splice(timelineItemToDelete, 1);
+
+    // Determinar o novo status baseado na última entrada do timeline
+    const lastTimelineItem = newTimeline[newTimeline.length - 1];
+    const newStatus = lastTimelineItem ? lastTimelineItem.status : 'PENDING';
+
+    // Atualizar no localStorage
+    const orders = JSON.parse(localStorage.getItem('juju-orders') || '[]');
+    const updatedOrders = orders.map((o: Order) => {
+      if (o.id === order.id) {
+        return {
+          ...o,
+          status: newStatus,
+          timeline: newTimeline
+        };
+      }
+      return o;
+    });
+
+    localStorage.setItem('juju-orders', JSON.stringify(updatedOrders));
+    
+    // Atualizar estado local
+    setOrder({
+      ...order,
+      status: newStatus,
+      timeline: newTimeline
+    });
+
+    setShowDeleteConfirm(false);
+    setTimelineItemToDelete(null);
+    
+    // Disparar evento para outros componentes
+    window.dispatchEvent(new Event('storage'));
+  };
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('pt-BR', {
@@ -113,6 +200,14 @@ export default function OrderDetailsPage() {
       default: return method;
     }
   };
+
+  // Opções de status para o dropdown
+  const statusOptions = [
+    { id: "PENDING", label: "Pendente", color: "bg-orange-500" },
+    { id: "PREPARING", label: "Em Produção", color: "bg-yellow-500" },
+    { id: "OUT_FOR_DELIVERY", label: "Saiu para Entrega", color: "bg-blue-500" },
+    { id: "DELIVERED", label: "Entregue", color: "bg-green-500" },
+  ];
 
   if (loading) {
     return (
@@ -158,11 +253,33 @@ export default function OrderDetailsPage() {
           </h1>
         </div>
         
-        {/* Status Badge */}
+        {/* Status Badge e Seletor */}
         <div className="flex items-center justify-between mt-4">
-          <div className={`px-3 py-1 rounded-full text-white text-sm font-medium ${getStatusColor(order.status)}`}>
-            {getStatusText(order.status)}
+          <div className="relative">
+            <button
+              onClick={() => setStatusOpen(!statusOpen)}
+              className={`flex items-center gap-2 px-3 py-1 rounded-full text-white text-sm font-medium ${getStatusColor(order.status)}`}
+            >
+              {getStatusText(order.status)}
+              <ChevronDownIcon className="w-4 h-4" />
+            </button>
+
+            {statusOpen && (
+              <div className="absolute left-0 mt-2 z-50 bg-white border rounded-xl shadow-xl w-48">
+                {statusOptions.map((option) => (
+                  <button
+                    key={option.id}
+                    onClick={() => handleStatusChange(option.id)}
+                    className="w-full text-left px-3 py-2 text-sm hover:bg-gray-100 flex items-center gap-2"
+                  >
+                    <div className={`w-2 h-2 rounded-full ${option.color}`}></div>
+                    {option.label}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
+
           <p className="text-sm text-gray-600">
             {formatDate(order.orderDate)}
           </p>
@@ -319,24 +436,47 @@ export default function OrderDetailsPage() {
 
         {/* Timeline do Pedido */}
         <section className="bg-white rounded-xl p-4 shadow-sm">
-          <h2 className="text-lg font-bold text-[#4F2712] mb-3">Andamento do Pedido</h2>
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-lg font-bold text-[#4F2712]">Andamento do Pedido</h2>
+            {order.timeline.length > 1 && (
+              <p className="text-sm text-gray-500">
+                {order.timeline.length} atualizações
+              </p>
+            )}
+          </div>
           <div className="space-y-4">
             {order.timeline.map((event, index) => (
-              <div key={index} className="flex gap-3">
+              <div key={index} className="flex gap-3 group relative">
                 <div className="flex flex-col items-center">
                   <div className={`w-3 h-3 rounded-full ${
-                    index === 0 ? getStatusColor(event.status) : 'bg-gray-300'
+                    index === order.timeline.length - 1 ? getStatusColor(event.status) : 'bg-gray-300'
                   }`}></div>
                   {index < order.timeline.length - 1 && (
                     <div className="w-0.5 h-full bg-gray-300 mt-1"></div>
                   )}
                 </div>
                 <div className="flex-1 pb-4 last:pb-0">
-                  <p className="font-medium text-gray-800 text-sm">{event.description}</p>
+                  <p className="font-medium text-gray-800 text-sm w-[90%]">{event.description}</p>
                   <p className="text-xs text-gray-500 mt-1">
                     {formatDate(event.timestamp)}
                   </p>
+                  <span className={`text-xs px-2 py-1 rounded-full text-white mt-1 inline-block ${
+                    getStatusColor(event.status)
+                  }`}>
+                    {getStatusText(event.status)}
+                  </span>
                 </div>
+                
+                {/* Botão para remover entrada do timeline (exceto a primeira) */}
+                {index > 0 && (
+                  <button
+                    onClick={() => handleDeleteTimelineItem(index)}
+                    className="absolute right-0 top-0 transition-opacity p-1 text-gray-400 hover:text-red-500 w-[10%]"
+                    title="Remover esta atualização"
+                  >
+                    <TrashIcon className="h-4 w-4" />
+                  </button>
+                )}
               </div>
             ))}
           </div>
@@ -372,6 +512,43 @@ export default function OrderDetailsPage() {
           </div>
         </section>
       </main>
+
+      {/* Modal de Confirmação para Excluir Timeline Item */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl p-6 max-w-sm w-full">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-bold text-[#4F2712]">Confirmar Exclusão</h3>
+              <button
+                onClick={() => setShowDeleteConfirm(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <XMarkIcon className="h-5 w-5" />
+              </button>
+            </div>
+            
+            <p className="text-gray-600 mb-6">
+              Tem certeza que deseja remover esta atualização do histórico? 
+              O status do pedido será revertido para a atualização anterior.
+            </p>
+            
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowDeleteConfirm(false)}
+                className="flex-1 py-2 px-4 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={confirmDeleteTimelineItem}
+                className="flex-1 py-2 px-4 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
+              >
+                Remover
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

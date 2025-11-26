@@ -185,34 +185,34 @@ export default function Dashboard() {
       <div className="grid grid-cols-2 gap-4 p-6">
         <Link
           href="/financas/despesas"
-          className="flex flex-col items-center justify-center bg-[#34A7B2] rounded-xl p-4 text-white shadow-sm hover:scale-105 transition"
+          className="flex flex-col gap-y-2 items-center justify-center bg-[#34A7B2] rounded-xl p-4 text-white shadow-sm hover:scale-105 transition"
         >
-          <BanknotesIcon className="h-6 w-6 text-white" />
-          <span className="text-sm font-semibold">Registrar Despesa</span>
+          <BanknotesIcon className="h-8 w-8 text-white" />
+          <span className="text-sm text-center font-semibold">Registrar Despesa</span>
         </Link>
 
         <Link
           href="/financas/relatorio"
-          className="flex flex-col items-center justify-center bg-[#B95760] rounded-xl p-4 text-white shadow-sm hover:scale-105 transition"
+          className="flex flex-col gap-y-2 items-center justify-center bg-[#B95760] rounded-xl p-4 text-white shadow-sm hover:scale-105 transition"
         >
-          <DocumentChartBarIcon className="h-6 w-6 text-white" />
-          <span className="text-sm font-semibold">Gerar Relatório</span>
+          <DocumentChartBarIcon className="h-8 w-8 text-white" />
+          <span className="text-sm text-center font-semibold">Gerar Relatório</span>
         </Link>
 
         <Link
           href="/estoque"
-          className="flex flex-col items-center justify-center bg-[#B95760] rounded-xl p-4 text-white shadow-sm hover:scale-105 transition"
+          className="flex flex-col gap-y-2 items-center justify-center bg-[#B95760] rounded-xl p-4 text-white shadow-sm hover:scale-105 transition"
         >
-          <CubeIcon className="h-6 w-6 text-white" />
-          <span className="text-sm font-semibold">Gerenciar Estoque</span>
+          <CubeIcon className="h-8 w-8 text-white" />
+          <span className="text-sm text-center font-semibold">Gerenciar Estoque</span>
         </Link>
 
         <Link
           href="/historico-pedidos/agenda"
-          className="flex flex-col items-center justify-center bg-[#34A7B2] rounded-xl p-4 text-white shadow-sm hover:scale-105 transition"
+          className="flex flex-col gap-y-2 items-center justify-center bg-[#34A7B2] rounded-xl p-4 text-white shadow-sm hover:scale-105 transition"
         >
-          <CalendarIcon className="h-6 w-6 text-white" />
-          <span className="text-sm font-semibold">Gerenciar Agenda</span>
+          <CalendarIcon className="h-8 w-8 text-white" />
+          <span className="text-sm text-center font-semibold">Gerenciar Agenda</span>
         </Link>
       </div>
 

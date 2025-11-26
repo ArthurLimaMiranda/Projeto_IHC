@@ -61,6 +61,82 @@ interface CartContextType {
   getOrdersByStatus: (status: Order['status']) => Order[];
   calculateRevenue: (period?: 'day' | 'week' | 'month') => number;
   getPendingOrdersCount: () => number;
+  
+  // Funções para agenda
+  getOrdersGroupedByDeliveryDate: () => Record<string, Order[]>;
+  getOrdersByDeliveryDate: (date: string) => Order[];
+  getUpcomingOrders: (days?: number) => Order[];
+  getTodayOrders: () => Order[];
+  updateOrderDeliveryDate: (orderId: string, newDeliveryDate: string) => boolean;
+  // Funções para finanças
+  
+  addExpense: (expense: Expense) => string;
+  getExpenses: () => Expense[];
+  getExpensesByPeriod: (startDate: string, endDate: string) => Expense[];
+  getExpensesByCategory: (category: string) => Expense[];
+  calculateTotalExpenses: (period?: 'day' | 'week' | 'month') => number;
+  getFinancialSummary: (period?: 'month' | '30days' | 'year') => FinancialSummary;
+  getRevenueVsExpenses: (weeks?: number) => RevenueExpenseData[];
+  getProfitEvolution: (months?: number) => ProfitData[];
+  saveBusinessInfo: (businessInfo: BusinessInfo) => void;
+  getBusinessInfo: () => BusinessInfo | null;
+}
+
+export interface Expense {
+  id: string;
+  amount: number;
+  category: string;
+  subcategory?: string;
+  description?: string;
+  date: string;
+  supplier?: string;
+  paymentMethod: string;
+  receiptImage?: string;
+}
+
+export interface FinancialSummary {
+  totalRevenue: number;
+  totalExpenses: number;
+  netProfit: number;
+  revenueGrowth: number;
+  expenseGrowth: number;
+  profitGrowth: number;
+}
+
+export interface RevenueExpenseData {
+  week: string;
+  revenue: number;
+  expenses: number;
+}
+
+export interface ProfitData {
+  month: string;
+  profit: number;
+}
+
+export interface BusinessInfo {
+  personal: {
+    name: string;
+    cpf: string;
+    email: string;
+    phone: string;
+  };
+  address: {
+    street: string;
+    city: string;
+    state: string;
+  };
+  business: {
+    name: string;
+    productTypes: string;
+    cnpj?: string;
+    cnae?: string;
+  };
+  financial: {
+    monthlyRevenue: number;
+    annualRevenue: number;
+    additionalInfo?: string;
+  };
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
@@ -273,6 +349,314 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     ).length;
   };
 
+  // Funções para agenda
+  // Buscar pedidos agrupados por data de entrega
+  const getOrdersGroupedByDeliveryDate = (): Record<string, Order[]> => {
+    const orders = getAllOrders();
+    const grouped: Record<string, Order[]> = {};
+
+    orders.forEach(order => {
+      const date = new Date(order.estimatedDelivery).toISOString().split('T')[0]; // YYYY-MM-DD
+      if (!grouped[date]) {
+        grouped[date] = [];
+      }
+      grouped[date].push(order);
+    });
+
+    return grouped;
+  };
+
+  // Buscar pedidos por data específica
+  const getOrdersByDeliveryDate = (date: string): Order[] => {
+    const orders = getAllOrders();
+    const targetDate = new Date(date).toISOString().split('T')[0];
+    
+    return orders.filter(order => {
+      const orderDate = new Date(order.estimatedDelivery).toISOString().split('T')[0];
+      return orderDate === targetDate;
+    });
+  };
+
+  // Buscar próximos pedidos (próximos 7 dias)
+  const getUpcomingOrders = (days: number = 7): Order[] => {
+    const orders = getAllOrders();
+    const today = new Date();
+    const futureDate = new Date();
+    futureDate.setDate(today.getDate() + days);
+
+    return orders
+      .filter(order => {
+        const deliveryDate = new Date(order.estimatedDelivery);
+        return deliveryDate >= today && deliveryDate <= futureDate;
+      })
+      .sort((a, b) => new Date(a.estimatedDelivery).getTime() - new Date(b.estimatedDelivery).getTime());
+  };
+
+  // Buscar pedidos do dia atual
+  const getTodayOrders = (): Order[] => {
+    const orders = getAllOrders();
+    const today = new Date().toISOString().split('T')[0];
+    
+    return orders.filter(order => {
+      const orderDate = new Date(order.estimatedDelivery).toISOString().split('T')[0];
+      return orderDate === today;
+    });
+  };
+
+  // Atualizar data de entrega de um pedido
+  const updateOrderDeliveryDate = (orderId: string, newDeliveryDate: string): boolean => {
+    try {
+      const orders = getAllOrders();
+      const updatedOrders = orders.map(order => {
+        if (order.id === orderId) {
+          const updatedOrder: Order = {
+            ...order,
+            estimatedDelivery: newDeliveryDate,
+            timeline: [
+              ...order.timeline,
+              {
+                status: 'UPDATED',
+                timestamp: new Date().toISOString(),
+                description: `Data de entrega alterada para ${new Date(newDeliveryDate).toLocaleDateString('pt-BR')}`
+              }
+            ]
+          };
+          return updatedOrder;
+        }
+        return order;
+      });
+      
+      localStorage.setItem('juju-orders', JSON.stringify(updatedOrders));
+      window.dispatchEvent(new Event('storage'));
+      return true;
+    } catch (error) {
+      console.error('Erro ao atualizar data de entrega:', error);
+      return false;
+    }
+  };
+
+  // Funções para finanças
+  const addExpense = (expenseData: Omit<Expense, 'id'>): string => {
+    const expenses = getExpenses();
+    const newExpense: Expense = {
+      ...expenseData,
+      id: 'EXP' + Date.now().toString().slice(-8),
+    };
+    
+    expenses.push(newExpense);
+    localStorage.setItem('juju-expenses', JSON.stringify(expenses));
+    window.dispatchEvent(new Event('storage'));
+    return newExpense.id;
+  };
+
+  const getExpenses = (): Expense[] => {
+    try {
+      return JSON.parse(localStorage.getItem('juju-expenses') || '[]');
+    } catch (error) {
+      console.error('Erro ao buscar despesas:', error);
+      return [];
+    }
+  };
+
+  const getExpensesByPeriod = (startDate: string, endDate: string): Expense[] => {
+    const expenses = getExpenses();
+    return expenses.filter(expense => {
+      const expenseDate = new Date(expense.date);
+      const start = new Date(startDate);
+      const end = new Date(endDate);
+      return expenseDate >= start && expenseDate <= end;
+    });
+  };
+
+  const getExpensesByCategory = (category: string): Expense[] => {
+    const expenses = getExpenses();
+    return expenses.filter(expense => expense.category === category);
+  };
+
+  const calculateTotalExpenses = (period?: 'day' | 'week' | 'month'): number => {
+    const expenses = getExpenses();
+    const now = new Date();
+    let startDate: Date;
+
+    switch (period) {
+      case 'day':
+        startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        break;
+      case 'week':
+        startDate = new Date(now);
+        startDate.setDate(now.getDate() - 7);
+        break;
+      case 'month':
+        startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+        break;
+      default:
+        return expenses.reduce((total, expense) => total + expense.amount, 0);
+    }
+
+    return expenses
+      .filter(expense => new Date(expense.date) >= startDate)
+      .reduce((total, expense) => total + expense.amount, 0);
+  };
+
+  const getFinancialSummary = (period: 'month' | '30days' | 'year' = 'month'): FinancialSummary => {
+    const orders = getAllOrders();
+    const expenses = getExpenses();
+    const now = new Date();
+    
+    let startDate: Date;
+    let previousStartDate: Date;
+
+    switch (period) {
+      case 'month':
+        startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+        previousStartDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+        break;
+      case '30days':
+        startDate = new Date(now);
+        startDate.setDate(now.getDate() - 30);
+        previousStartDate = new Date(now);
+        previousStartDate.setDate(now.getDate() - 60);
+        break;
+      case 'year':
+        startDate = new Date(now.getFullYear(), 0, 1);
+        previousStartDate = new Date(now.getFullYear() - 1, 0, 1);
+        break;
+      default:
+        startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+        previousStartDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    }
+
+    // Calcular dados atuais
+    const currentOrders = orders.filter(order => new Date(order.orderDate) >= startDate);
+    const currentExpenses = expenses.filter(expense => new Date(expense.date) >= startDate);
+    
+    const totalRevenue = currentOrders.reduce((sum, order) => sum + order.total, 0);
+    const totalExpenses = currentExpenses.reduce((sum, expense) => sum + expense.amount, 0);
+    const netProfit = totalRevenue - totalExpenses;
+
+    // Calcular dados do período anterior para crescimento
+    const previousOrders = orders.filter(order => 
+      new Date(order.orderDate) >= previousStartDate && new Date(order.orderDate) < startDate
+    );
+    const previousExpenses = expenses.filter(expense => 
+      new Date(expense.date) >= previousStartDate && new Date(expense.date) < startDate
+    );
+
+    const previousRevenue = previousOrders.reduce((sum, order) => sum + order.total, 0);
+    const previousExpensesTotal = previousExpenses.reduce((sum, expense) => sum + expense.amount, 0);
+    const previousProfit = previousRevenue - previousExpensesTotal;
+
+    // Calcular crescimento percentual
+    const revenueGrowth = previousRevenue > 0 ? ((totalRevenue - previousRevenue) / previousRevenue) * 100 : 0;
+    const expenseGrowth = previousExpensesTotal > 0 ? ((totalExpenses - previousExpensesTotal) / previousExpensesTotal) * 100 : 0;
+    const profitGrowth = previousProfit > 0 ? ((netProfit - previousProfit) / previousProfit) * 100 : 0;
+
+    return {
+      totalRevenue,
+      totalExpenses,
+      netProfit,
+      revenueGrowth,
+      expenseGrowth,
+      profitGrowth
+    };
+  };
+
+  const getRevenueVsExpenses = (weeks: number = 4): RevenueExpenseData[] => {
+    const orders = getAllOrders();
+    const expenses = getExpenses();
+    const result: RevenueExpenseData[] = [];
+
+    for (let i = weeks - 1; i >= 0; i--) {
+      const weekStart = new Date();
+      weekStart.setDate(weekStart.getDate() - (i * 7));
+      const weekEnd = new Date(weekStart);
+      weekEnd.setDate(weekEnd.getDate() + 6);
+
+      const weekOrders = orders.filter(order => {
+        const orderDate = new Date(order.orderDate);
+        return orderDate >= weekStart && orderDate <= weekEnd;
+      });
+
+      const weekExpenses = expenses.filter(expense => {
+        const expenseDate = new Date(expense.date);
+        return expenseDate >= weekStart && expenseDate <= weekEnd;
+      });
+
+      const weekRevenue = weekOrders.reduce((sum, order) => sum + order.total, 0);
+      const weekExpensesTotal = weekExpenses.reduce((sum, expense) => sum + expense.amount, 0);
+
+      result.push({
+        week: `Sem ${weeks - i}`,
+        revenue: weekRevenue,
+        expenses: weekExpensesTotal
+      });
+    }
+
+    return result;
+  };
+
+  const getProfitEvolution = (months: number = 6): ProfitData[] => {
+    const result: ProfitData[] = [];
+    const now = new Date();
+
+    for (let i = months - 1; i >= 0; i--) {
+      const month = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const nextMonth = new Date(now.getFullYear(), now.getMonth() - i + 1, 1);
+      
+      const summary = getFinancialSummaryForPeriod(month, nextMonth);
+      
+      result.push({
+        month: month.toLocaleDateString('pt-BR', { month: 'short' }),
+        profit: summary.netProfit
+      });
+    }
+
+    return result;
+  };
+
+  const getFinancialSummaryForPeriod = (startDate: Date, endDate: Date): FinancialSummary => {
+    const orders = getAllOrders();
+    const expenses = getExpenses();
+
+    const periodOrders = orders.filter(order => {
+      const orderDate = new Date(order.orderDate);
+      return orderDate >= startDate && orderDate < endDate;
+    });
+
+    const periodExpenses = expenses.filter(expense => {
+      const expenseDate = new Date(expense.date);
+      return expenseDate >= startDate && expenseDate < endDate;
+    });
+
+    const totalRevenue = periodOrders.reduce((sum, order) => sum + order.total, 0);
+    const totalExpenses = periodExpenses.reduce((sum, expense) => sum + expense.amount, 0);
+    const netProfit = totalRevenue - totalExpenses;
+
+    return {
+      totalRevenue,
+      totalExpenses,
+      netProfit,
+      revenueGrowth: 0,
+      expenseGrowth: 0,
+      profitGrowth: 0
+    };
+  };
+
+  const saveBusinessInfo = (businessInfo: BusinessInfo): void => {
+    localStorage.setItem('juju-business-info', JSON.stringify(businessInfo));
+    window.dispatchEvent(new Event('storage'));
+  };
+
+  const getBusinessInfo = (): BusinessInfo | null => {
+    try {
+      return JSON.parse(localStorage.getItem('juju-business-info') || 'null');
+    } catch (error) {
+      console.error('Erro ao buscar informações do negócio:', error);
+      return null;
+    }
+  };
+
+
   return (
     <CartContext.Provider value={{
       cartItems,
@@ -289,7 +673,23 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
       getOrderById,
       getOrdersByStatus,
       calculateRevenue,
-      getPendingOrdersCount
+      getPendingOrdersCount,
+      // Funções da agenda
+      getOrdersGroupedByDeliveryDate,
+      getOrdersByDeliveryDate,
+      getUpcomingOrders,
+      getTodayOrders,
+      updateOrderDeliveryDate,
+      addExpense,
+      getExpenses,
+      getExpensesByPeriod,
+      getExpensesByCategory,
+      calculateTotalExpenses,
+      getFinancialSummary,
+      getRevenueVsExpenses,
+      getProfitEvolution,
+      saveBusinessInfo,
+      getBusinessInfo
     }}>
       {children}
     </CartContext.Provider>

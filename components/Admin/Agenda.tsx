@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   ChevronLeftIcon,
   ChevronRightIcon,
@@ -12,7 +12,7 @@ import {
 import MenuInferior from "@/components/Admin/MenuInferior";
 import { useRouter } from "next/navigation";
 import { QuestionMarkCircleIcon } from "@heroicons/react/24/outline";
-
+import { useCart } from "@/contexts/CartContext";
 
 // ----------------------------------------------------------------------
 // CONSTANTES
@@ -72,6 +72,12 @@ function getWeekDates(selectedDay) {
 
 export default function AgendaPage() {
   const router = useRouter();
+  const { 
+    getAllOrders, 
+    getOrdersByDeliveryDate, 
+    updateOrderDeliveryDate,
+    getTodayOrders 
+  } = useCart();
 
   // ➤ Agora inicia sempre em "Mês"
   const [selectedView, setSelectedView] = useState("Mês");
@@ -83,6 +89,10 @@ export default function AgendaPage() {
   // ➤ Dia selecionado começa no dia atual
   const [selectedDay, setSelectedDay] = useState(today);
 
+  // ➤ Eventos reais dos pedidos
+  const [events, setEvents] = useState([]);
+  const [todayEvents, setTodayEvents] = useState([]);
+
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
 
@@ -90,19 +100,86 @@ export default function AgendaPage() {
   const weekDates = getWeekDates(selectedDay);
 
   // ----------------------------------------------------------------------
-  // EVENTOS DE EXEMPLO
+  // CARREGAR EVENTOS REAIS
   // ----------------------------------------------------------------------
 
-  const events = [
-    { date: "2025-01-05", title: "Bolo Casamento", status: "pending", time: "14:00" },
-    { date: "2025-01-05", title: "Kit Festa Infantil", status: "completed", time: "09:00" },
-    { date: "2025-01-10", title: "Folga", status: "block", time: "Dia inteiro" },
-    { date: "2025-01-18", title: "Encomenda Brownie", status: "pending", time: "11:00" }
-  ];
+  useEffect(() => {
+    const loadEvents = () => {
+      try {
+        const orders = getAllOrders();
+        
+        // Transformar pedidos em eventos para a agenda
+        const eventsFromOrders = orders.map(order => {
+          const deliveryDate = new Date(order.estimatedDelivery);
+          const dateKey = deliveryDate.toISOString().split("T")[0];
+          
+          return {
+            id: order.id,
+            date: dateKey,
+            title: `Pedido ${order.id} - ${order.customer.name}`,
+            description: order.items.map(item => item.name).join(', '),
+            status: getEventStatus(order.status),
+            time: deliveryDate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
+            order: order,
+            customerName: order.customer.name,
+            address: order.customer.address,
+            phone: order.customer.phone,
+            total: order.total
+          };
+        });
 
-  const todayEvents = events.filter(
-    (e) => e.date === selectedDay.toISOString().split("T")[0]
-  );
+        setEvents(eventsFromOrders);
+
+        // Carregar eventos do dia selecionado
+        const selectedDateKey = selectedDay.toISOString().split("T")[0];
+        const eventsForSelectedDay = eventsFromOrders.filter(
+          event => event.date === selectedDateKey
+        );
+        setTodayEvents(eventsForSelectedDay);
+      } catch (error) {
+        console.error('Erro ao carregar eventos:', error);
+      }
+    };
+
+    loadEvents();
+    
+    // Atualizar quando houver mudanças no localStorage
+    const handleStorageChange = () => loadEvents();
+    window.addEventListener('storage', handleStorageChange);
+    
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, [getAllOrders, selectedDay]);
+
+  const getEventStatus = (orderStatus) => {
+    switch (orderStatus) {
+      case 'PENDING': return "pending";
+      case 'PREPARING': return "pending";
+      case 'OUT_FOR_DELIVERY': return "pending";
+      case 'DELIVERED': return "completed";
+      case 'CANCELLED': return "block";
+      default: return "pending";
+    }
+  };
+
+  const getStatusColor = (status) => {
+    switch (status) {
+      case 'PENDING': return 'bg-orange-500';
+      case 'PREPARING': return 'bg-yellow-500';
+      case 'OUT_FOR_DELIVERY': return 'bg-blue-500';
+      case 'DELIVERED': return 'bg-green-500';
+      default: return 'bg-gray-500';
+    }
+  };
+
+  const getStatusText = (status) => {
+    switch (status) {
+      case 'PENDING': return 'Pendente';
+      case 'PREPARING': return 'Em Produção';
+      case 'OUT_FOR_DELIVERY': return 'Saiu para Entrega';
+      case 'DELIVERED': return 'Entregue';
+      default: return status;
+    }
+  };
 
   // ----------------------------------------------------------------------
   // NAVEGAÇÃO
@@ -110,7 +187,9 @@ export default function AgendaPage() {
 
   function handlePrev() {
     if (selectedView === "Semana") {
-      setSelectedDay(new Date(selectedDay.setDate(selectedDay.getDate() - 7)));
+      const newDate = new Date(selectedDay);
+      newDate.setDate(selectedDay.getDate() - 7);
+      setSelectedDay(newDate);
     } else if (selectedView === "Mês") {
       setCurrentDate(new Date(year, month - 1, 1));
     } else {
@@ -120,13 +199,26 @@ export default function AgendaPage() {
 
   function handleNext() {
     if (selectedView === "Semana") {
-      setSelectedDay(new Date(selectedDay.setDate(selectedDay.getDate() + 7)));
+      const newDate = new Date(selectedDay);
+      newDate.setDate(selectedDay.getDate() + 7);
+      setSelectedDay(newDate);
     } else if (selectedView === "Mês") {
       setCurrentDate(new Date(year, month + 1, 1));
     } else {
       setCurrentDate(new Date(year + 1, 0, 1));
     }
   }
+
+  // ----------------------------------------------------------------------
+  // FUNÇÕES PARA ATUALIZAR DATAS
+  // ----------------------------------------------------------------------
+
+  const handleDateChange = (orderId, newDate) => {
+    const success = updateOrderDeliveryDate(orderId, newDate);
+    if (success) {
+      // A atualização será refletida automaticamente pelo event listener
+    }
+  };
 
   // ----------------------------------------------------------------------
   // VISUALIZAÇÕES
@@ -142,9 +234,9 @@ export default function AgendaPage() {
         <div className="grid grid-cols-7">
           {weekDates.map((date, i) => {
             const iso = date.toISOString().split("T")[0];
-            const hasEvent = events.some((e) => e.date === iso);
-            const isSelected =
-              selectedDay.toDateString() === date.toDateString();
+            const dayEvents = events.filter((e) => e.date === iso);
+            const hasEvent = dayEvents.length > 0;
+            const isSelected = selectedDay.toDateString() === date.toDateString();
 
             return (
               <button
@@ -162,6 +254,13 @@ export default function AgendaPage() {
 
                 {hasEvent && (
                   <span className="absolute bottom-1 w-1.5 h-1.5 bg-event-pending rounded-full"></span>
+                )}
+                
+                {/* Mostrar quantidade de eventos */}
+                {dayEvents.length > 0 && (
+                  <span className="absolute top-1 right-1 bg-[#B95760] text-white text-xs rounded-full w-4 h-4 flex items-center justify-center">
+                    {dayEvents.length}
+                  </span>
                 )}
               </button>
             );
@@ -186,10 +285,10 @@ export default function AgendaPage() {
               d.num
             );
             const iso = dateObj.toISOString().split("T")[0];
-            const hasEvent = events.some((e) => e.date === iso);
+            const dayEvents = events.filter((e) => e.date === iso);
+            const hasEvent = dayEvents.length > 0;
 
-            const isSelected =
-              selectedDay.toDateString() === dateObj.toDateString();
+            const isSelected = selectedDay.toDateString() === dateObj.toDateString();
 
             return (
               <button
@@ -211,6 +310,13 @@ export default function AgendaPage() {
 
                 {hasEvent && (
                   <span className="absolute bottom-1 w-1.5 h-1.5 bg-event-pending rounded-full"></span>
+                )}
+                
+                {/* Mostrar quantidade de eventos */}
+                {dayEvents.length > 0 && (
+                  <span className="absolute top-0 right-0 bg-[#B95760] text-white text-xs rounded-full w-3 h-3 flex items-center justify-center text-[10px]">
+                    {dayEvents.length}
+                  </span>
                 )}
               </button>
             );
@@ -246,7 +352,8 @@ export default function AgendaPage() {
                     d.num
                   );
                   const iso = dateObj.toISOString().split("T")[0];
-                  const hasEvent = events.some((e) => e.date === iso);
+                  const dayEvents = events.filter((e) => e.date === iso);
+                  const hasEvent = dayEvents.length > 0;
 
                   const isSelected =
                     selectedDay.toDateString() === dateObj.toDateString();
@@ -292,8 +399,11 @@ export default function AgendaPage() {
 
       {/* HEADER */}
       <header className="flex items-center bg-[#EEEDDF] p-4 justify-between sticky top-0 z-10">
-        <ArrowLeftIcon className="w-7 h-7 text-[#4F2712] cursor-pointer" onClick={() => router.back()} />
-        <h1 className="text-lg font-bold text-[#4F2712]">Minha Agenda</h1>
+        <ArrowLeftIcon 
+          className="w-7 h-7 text-[#4F2712] cursor-pointer" 
+          onClick={() => router.back()} 
+        />
+        <h1 className="text-lg font-bold text-[#4F2712]">Agenda de Entregas</h1>
         <QuestionMarkCircleIcon className="w-7 h-7 text-[#4F2712]" />
       </header>
 
@@ -343,24 +453,31 @@ export default function AgendaPage() {
       {/* EVENTOS DO DIA */}
       <div className="px-5 mt-3">
         <h3 className="text-base font-bold text-[#4F2712] mb-3">
-          Eventos do dia {selectedDay.getDate()}
+          Entregas para {selectedDay.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })}
         </h3>
 
         {todayEvents.length === 0 && (
-          <p className="text-sm text-[#4F2712]">Nenhum evento.</p>
+          <div className="text-center py-8 text-gray-500">
+            <ClockIcon className="h-12 w-12 mx-auto mb-2 text-gray-300" />
+            <p>Nenhuma entrega para esta data</p>
+          </div>
         )}
 
         <div className="flex flex-col gap-3">
           {todayEvents.map((event, i) => (
-            <div key={i} className="flex items-center gap-4 bg-[#EEE] p-3 rounded-xl">
+            <div 
+              key={i} 
+              className="flex items-center gap-4 bg-white p-4 rounded-xl shadow-sm border border-gray-100 cursor-pointer hover:shadow-md transition-shadow"
+              onClick={() => router.push(`/historico-pedidos/${event.id}`)}
+            >
 
               <div
-                className={`flex items-center justify-center size-10 rounded-lg ${
+                className={`flex items-center justify-center size-12 rounded-lg ${
                   event.status === "pending"
-                    ? "bg-event-pending/20 text-event-pending"
+                    ? "bg-orange-100 text-orange-600 border border-orange-200"
                     : event.status === "completed"
-                    ? "bg-event-completed/20 text-event-completed"
-                    : "bg-event-block/20 text-event-block"
+                    ? "bg-green-100 text-green-600 border border-green-200"
+                    : "bg-red-100 text-red-600 border border-red-200"
                 }`}
               >
                 {event.status === "pending" && <ClockIcon className="w-6 h-6" />}
@@ -368,21 +485,51 @@ export default function AgendaPage() {
                 {event.status === "block" && <StopIcon className="w-6 h-6" />}
               </div>
 
-              <div className="flex-1">
-                <p className="text-[#4F2712] text-base font-medium">{event.title}</p>
-                <p className="text-sm text-[#4F2712]/70">{event.time}</p>
-              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-start justify-between mb-1">
+                  <h4 className="font-bold text-[#B95760] text-sm truncate">
+                    {event.title}
+                  </h4>
+                  <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full ml-2 flex-shrink-0">
+                    {event.time}
+                  </span>
+                </div>
+                
+                <p className="text-sm text-gray-600 truncate mb-1">
+                  {event.description}
+                </p>
+                
+                <div className="flex items-center gap-2 text-xs text-gray-500">
+                  <span>📞 {event.phone}</span>
+                  <span>•</span>
+                  <span className="font-medium text-[#4F2712]">
+                    R$ {event.total.toFixed(2)}
+                  </span>
+                </div>
 
+                <div className="flex items-center justify-between mt-2">
+                  <span className={`text-xs px-2 py-1 rounded-full text-white ${
+                    getStatusColor(event.order.status)
+                  }`}>
+                    {getStatusText(event.order.status)}
+                  </span>
+                  
+                  {/* Input para alterar data/hora */}
+                  <input
+                    type="datetime-local"
+                    defaultValue={event.order.estimatedDelivery.slice(0, 16)}
+                    onChange={(e) => {
+                      e.stopPropagation();
+                      handleDateChange(event.id, e.target.value);
+                    }}
+                    className="text-xs border border-gray-300 rounded px-2 py-1 focus:ring-2 focus:ring-[#B95760] focus:border-transparent"
+                    onClick={(e) => e.stopPropagation()}
+                  />
+                </div>
+              </div>
             </div>
           ))}
         </div>
-      </div>
-
-      {/* FAB */}
-      <div className="fixed bottom-6 right-6 pb-16">
-        <button className="flex items-center justify-center size-14 bg-primary text-white rounded-2xl shadow-lg">
-          <PlusIcon className="w-10 h-10" />
-        </button>
       </div>
 
       <MenuInferior />
