@@ -57,24 +57,24 @@ export default function RegistroDespesa() {
         </div>
       </header>
 
-      <main className="flex-1 px-4 py-3 flex flex-col gap-6">
-        <h1 className="text-[32px] font-bold pt-2 pb-1">Qual é o valor?</h1>
+    <section className="mt-8 shadow-md rounded-xl bg-white m-5">
+      <main className="flex-1 px-4 py-3 flex flex-col gap-6 pt-6">
 
         {/* Valor */}
         <label className="flex flex-col">
-          <p className="text-secondary text-base font-medium pb-2">Valor</p>
+          <p className="text-[#4F2712] font-semibold pb-2 font-xl">Valor</p>
           <input
             type="text"
             placeholder="R$ 0,00"
             defaultValue="R$ 45,50"
             inputMode="decimal"
-            className="form-input w-full rounded-lg bg-subtle-light h-14 p-4 text-2xl font-bold placeholder:text-placeholder-light"
+            className="form-input w-full rounded-lg bg-background-light h-14 p-4 text-md placeholder:text-placeholder-light focus:ring-2 focus:ring-[#B95760] focus:outline-none"
           />
         </label>
 
         {/* Categoria */}
-        <div className="flex items-center gap-4 pt-4 pb-2">
-          <h3 className="text-lg font-bold">Categoria</h3>
+        <div className="flex items-center gap-4">
+          <h3 className="text-[#4F2712] font-semibold font-xl">Categoria</h3>
           <div className="flex-grow h-px bg-secondary/30"></div>
         </div>
         <div className="flex gap-3 flex-wrap">
@@ -83,8 +83,8 @@ export default function RegistroDespesa() {
               key={cat.label}
               className={`flex h-10 cursor-pointer items-center justify-center gap-x-2 rounded-full pl-3 pr-4 transition-all shadow-sm border
                 ${selectedCategory === cat.label
-                  ? "bg-secondary text-background-light border-secondary"
-                  : "bg-subtle-light border-transparent"}`}
+                  ? "bg-[#B95760] text-white"
+                  : "bg-subtle-light border border-[#B95760] text-[#B95760]"}`}
               onClick={() => setSelectedCategory(cat.label)}
             >
               <cat.icon className="w-5 h-5" />
@@ -94,60 +94,52 @@ export default function RegistroDespesa() {
         </div>
 
         {/* Subcategoria */}
-        <div className="rounded-lg bg-subtle-light p-4">
-          <label className="flex flex-col">
-            <p className="text-base font-medium pb-2">Subcategoria (opcional)</p>
-            <select className="w-full h-14 p-4 rounded-lg bg-background-light">
+        <div className="flex flex-col rounded-lg bg-subtle-light flex flex-col">
+            <p className="text-base font-medium pb-2 text-[#4F2712]">Subcategoria (opcional)</p>
+            <select className="w-full h-14 p-4 rounded-lg bg-background-light focus:ring-2 focus:ring-[#B95760] focus:outline-none">
               {subcategories.map((sub) => (
                 <option key={sub} value={sub}>
                   {sub}
                 </option>
               ))}
             </select>
-          </label>
         </div>
 
         {/* Descrição */}
         <label className="flex flex-col">
-          <p className="text-base font-medium pb-2">Descrição (opcional)</p>
+          <p className="text-[#4F2712] font-medium pb-2">Descrição (opcional)</p>
           <input
             type="text"
             placeholder="Ex: Farinha de amêndoas premium"
             defaultValue="Farinha de trigo especial"
-            className="w-full h-14 p-4 rounded-lg bg-subtle-light"
+            className="w-full h-14 p-4 rounded-lg bg-subtle-light focus:ring-2 focus:ring-[#B95760] focus:outline-none"
           />
         </label>
 
         {/* Data */}
         <label className="flex flex-col">
-          <p className="text-base font-medium pb-2">Data</p>
+          <p className="text-[#4F2712] font-semibold font-xl pb-2">Data</p>
           <input
-            type="text"
-            defaultValue="24 de Julho, 2024"
-            className="w-full h-14 p-4 rounded-lg bg-subtle-light"
+            type="date"
+            defaultValue="2024-07-24"
+            className="w-full h-14 p-4 rounded-lg bg-subtle-light text-[#0A0A0A] focus:ring-2 focus:ring-[#B95760] focus:outline-none"
           />
         </label>
 
-        {/* Mais detalhes */}
-        <button className="flex items-center gap-2 text-accent-1 font-bold">
-          <PlusIcon className="w-5 h-5" />
-          Mais detalhes
-        </button>
-
         {/* Fornecedor / Pagamento / Foto */}
-        <div className="flex flex-col gap-6 pt-6">
+        <div className="flex flex-col gap-6 pt-2">
           <label className="flex flex-col">
-            <p className="text-base font-medium pb-2">Fornecedor / Loja (opcional)</p>
+            <p className="text-base font-medium pb-2 text-[#4F2712]">Fornecedor / Loja (opcional)</p>
             <input
               type="text"
               placeholder="Ex: Doce Vida Embalagens"
-              className="w-full h-14 p-4 rounded-lg bg-subtle-light"
+              className="w-full h-14 p-4 rounded-lg bg-subtle-light focus:ring-2 focus:ring-[#B95760] focus:outline-none"
             />
           </label>
 
           <label className="flex flex-col">
-            <p className="text-base font-medium pb-2">Tipo de Pagamento</p>
-            <select className="w-full h-14 p-4 rounded-lg bg-subtle-light">
+            <p className="text-base font-medium pb-2 text-[#4F2712]">Tipo de Pagamento</p>
+            <select className="w-full h-14 p-4 rounded-lg bg-background-light focus:ring-2 focus:ring-[#B95760] focus:outline-none">
               {paymentTypes.map((type) => (
                 <option key={type}>{type}</option>
               ))}
@@ -165,17 +157,18 @@ export default function RegistroDespesa() {
       </main>
 
       {/* Footer */}
-      <div className="sticky bottom-0 bg-background-light p-4 pt-2">
-        <div className="flex gap-4">
-          <button className="flex w-full justify-center rounded-xl bg-background-light h-14 text-primary border text-base font-bold">
+      <div className="sticky bottom-0 p-4 pt-2 m-12">
+        <div className="flex gap-4 items-center justify-center">
+          <button className="flex w-full justify-center items-center rounded-xl h-14 text-primary border text-base font-bold">
             Cancelar
           </button>
-          <button className="flex w-full justify-center rounded-xl bg-primary h-14 text-background-light text-base font-bold">
+          <button className="flex w-full justify-center rounded-xl items-center bg-primary h-14 text-background-light text-base font-bold">
             Salvar
           </button>
         </div>
       </div>
       <MenuInferior />
+    </section>
     </div>
   );
 }

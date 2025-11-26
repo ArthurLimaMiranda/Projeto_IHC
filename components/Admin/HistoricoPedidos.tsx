@@ -19,57 +19,66 @@ export default function HistoricoPedidosPage() {
   const router = useRouter();
 
   // --------------------------------------------------------
-  // MOCK DATA
+  // MOCK DATA (constante inicial)
   // --------------------------------------------------------
-
-  const allOrders = [
+  const initialOrders = [
     { id: 1020, client: "João", deliveryDate: "20/12/23", price: 150.0, description: "Bolo grande com recheio de chocolate", image: "https://picsum.photos/200?4", status: "em-producao" },
     { id: 1021, client: "Maria", deliveryDate: "18/12/23", price: 230.0, description: "50 cupcakes personalizados", image: "https://picsum.photos/200?5", status: "concluido" },
     { id: 1022, client: "Ana", deliveryDate: "15/12/23", price: 90.0, description: "Kit festa simples", image: "https://picsum.photos/200?6", status: "entregue" },
-
     { id: 1023, client: "Ricardo", deliveryDate: "12/12/23", price: 180.0, description: "Mini kit festa", image: "https://picsum.photos/200?7", status: "concluido" },
     { id: 1024, client: "Bruna", deliveryDate: "10/12/23", price: 260.0, description: "Bolo 3 andares", image: "https://picsum.photos/200?8", status: "entregue" },
     { id: 1025, client: "Clara", deliveryDate: "08/12/23", price: 110.0, description: "Bolo simples", image: "https://picsum.photos/200?9", status: "entregue" },
   ];
 
-  const pendingDeliveries = allOrders
-  .filter(order => order.status !== "concluido" && order.status !== "entregue")
-  .map(order => ({
-    id: order.id,
-    title: order.description,
-    date: order.deliveryDate,
-    image: order.image
-  }));
+  // --------------------------------------------------------
+  // STATE: orders é a fonte da verdade
+  // --------------------------------------------------------
+  const [orders, setOrders] = useState(initialOrders);
 
   // --------------------------------------------------------
-  // PENDINGS CAROUSEL (horizontal) - similar to Avaliacoes
+  // PENDINGS CAROUSEL (horizontal)
   // --------------------------------------------------------
   const pendRef = useRef(null);
   const [pendWidth, setPendWidth] = useState(0);
   const [pendIndex, setPendIndex] = useState(0);
 
+  // recalcula pendWidth quando o container ou orders mudam
   useEffect(() => {
-    // calcula limite de drag horizontal
-    if (pendRef.current) {
-      // @ts-ignore
-      setPendWidth(pendRef.current.scrollWidth - pendRef.current.offsetWidth);
-    }
-    // recompute on resize
-    const onResize = () => {
+    const update = () => {
       if (pendRef.current) {
         // @ts-ignore
-        setPendWidth(pendRef.current.scrollWidth - pendRef.current.offsetWidth);
+        setPendWidth(Math.max(0, pendRef.current.scrollWidth - pendRef.current.offsetWidth));
       }
     };
-    window.addEventListener("resize", onResize);
-    return () => window.removeEventListener("resize", onResize);
-  }, []);
+    update();
+    window.addEventListener("resize", update);
+    return () => window.removeEventListener("resize", update);
+  }, [orders]); // <- depende de orders para recalcular caso a lista de pendentes mude
+
+  // derive pendingDeliveries a partir de orders (não mais allOrders)
+  const pendingDeliveries = orders
+    .filter(order => order.status !== "concluido" && order.status !== "entregue")
+    .map(order => ({
+      id: order.id,
+      title: order.description,
+      date: order.deliveryDate,
+      image: order.image
+    }));
+
+  // quando pendingDeliveries mudar, garanta pendIndex válido
+  useEffect(() => {
+    if (pendingDeliveries.length === 0) {
+      setPendIndex(0);
+      return;
+    }
+    setPendIndex(prev => Math.min(prev, Math.max(0, pendingDeliveries.length - 1)));
+  }, [pendingDeliveries.length]);
 
   const PEND_ITEM_WIDTH = 304; // largura estimada (min-w + margin)
-
   const pendGetX = () => -pendIndex * PEND_ITEM_WIDTH;
 
   const handlePendDragEnd = (e, info) => {
+    if (pendingDeliveries.length <= 1) return;
     const threshold = 80;
     if (info.offset.x > threshold) {
       // swipe direito -> anterior
@@ -81,35 +90,89 @@ export default function HistoricoPedidosPage() {
   };
 
   const goToPend = (i) => setPendIndex(i);
-  const pendPrev = () => setPendIndex((p) => (p === 0 ? pendingDeliveries.length - 1 : p - 1));
-  const pendNext = () => setPendIndex((p) => (p + 1) % pendingDeliveries.length);
+  const pendPrev = () => setPendIndex((p) => (p === 0 ? Math.max(0, pendingDeliveries.length - 1) : p - 1));
+  const pendNext = () => setPendIndex(p => (pendingDeliveries.length === 0 ? 0 : (p + 1) % pendingDeliveries.length));
 
   // --------------------------------------------------------
-  // TODOS OS PEDIDOS - vertical pagination (4 por página)
+  // TODOS OS PEDIDOS - vertical pagination (ITEMS_PER_PAGE)
   // --------------------------------------------------------
   const ITEMS_PER_PAGE = 3;
-  const totalPages = Math.max(1, Math.ceil(allOrders.length / ITEMS_PER_PAGE));
+  const totalPages = Math.max(1, Math.ceil(orders.length / ITEMS_PER_PAGE));
 
   const [page, setPage] = useState(0);
   const [direction, setDirection] = useState(0);
+
+  // Se orders mudar e reduzir o número de páginas, ajustar page
+  useEffect(() => {
+    setPage(prev => Math.min(prev, totalPages - 1));
+  }, [totalPages]);
 
   const paginate = (newDirection) => {
     setDirection(newDirection);
     setPage((prev) => Math.min(Math.max(prev + newDirection, 0), totalPages - 1));
   };
 
-  const currentItems = allOrders.slice(
+  // derive currentItems a partir de orders (não mais allOrders)
+  const currentItems = orders.slice(
     page * ITEMS_PER_PAGE,
     page * ITEMS_PER_PAGE + ITEMS_PER_PAGE
   );
 
-  // variants para slide vertical
+  // variants para slide vertical (mantive igual)
   const variants = {
     enter: (dir) => ({ y: dir > 0 ? 300 : -300, opacity: 0 }),
     center: { y: 0, opacity: 1 },
     exit: (dir) => ({ y: dir > 0 ? -300 : 300, opacity: 0 }),
   };
 
+  // --------------------------------------------------------
+  // SelectStatus (comportamento: atualiza orders via onChange)
+  // --------------------------------------------------------
+  function SelectStatus({ status, onChange }) {
+    const [open, setOpen] = useState(false);
+
+    const options = [
+      { id: "em-producao", label: "Em Produção", color: "bg-[#C9A227]" },
+      { id: "concluido", label: "Concluído", color: "bg-[#3BB885]" },
+      { id: "entregue", label: "Entregue", color: "bg-[#B95760]" },
+    ];
+
+    const current = options.find((o) => o.id === status) || options[0];
+
+    return (
+      <div className="relative">
+        {/* BOTÃO PRINCIPAL */}
+        <button
+          onClick={() => setOpen(!open)}
+          className={`flex items-center gap-2 px-3 py-1 rounded-full text-sm font-medium text-white ${current.color}`}
+        >
+          {current.label}
+          <ChevronDownIcon className="w-4 h-4" />
+        </button>
+
+        {/* MENU DROPDOWN */}
+        {open && (
+          <div className="absolute left-0 mt-2 z-50 bg-white border rounded-xl shadow-xl w-40">
+            {options.map((op) => (
+              <button
+                key={op.id}
+                onClick={() => {
+                  onChange(op.id);
+                  setOpen(false);
+                }}
+                className="w-full text-left px-3 py-2 text-sm hover:bg-gray-100"
+              >
+                {op.label}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // --------------------------------------------------------
+  // RENDER
   // --------------------------------------------------------
   return (
     <div className="relative flex h-auto min-h-screen w-full flex-col bg-[#FFFFF4] overflow-hidden">
@@ -217,6 +280,7 @@ export default function HistoricoPedidosPage() {
           </div>
         </div>
       </div>
+
       {/* --------------------------------------------------------
         TODOS OS PEDIDOS — LISTA VERTICAL PAGINADA (slide vertical)
       --------------------------------------------------------- */}
@@ -269,26 +333,17 @@ export default function HistoricoPedidosPage() {
                   </div>
 
                   {/* STATUS */}
-                  <div className="flex items-center justify-between pt-2 pl-4 border-t border-brand-brown/10">
-                    <p className="text-sm text-brand-brown/80">Status:</p>
-
-                    {order.status === "em-producao" && (
-                      <button className="flex items-center gap-2 rounded-full bg-brand-teal px-3 py-1 text-sm font-medium text-white">
-                        Em Produção <ChevronDownIcon className="w-4 h-4" />
-                      </button>
-                    )}
-
-                    {order.status === "concluido" && (
-                      <button className="flex items-center gap-2 rounded-full bg-brand-light-blue px-3 py-1 text-sm font-medium text-brand-brown">
-                        Concluído <ChevronDownIcon className="w-4 h-4" />
-                      </button>
-                    )}
-
-                    {order.status === "entregue" && (
-                      <div className="flex items-center gap-2 rounded-full bg-brand-brown/10 px-3 py-1 text-sm font-medium text-brand-brown">
-                        <CheckCircleIcon className="w-4 h-4" /> Entregue
-                      </div>
-                    )}
+                  <div className="flex items-center justify-start pt-2 pl-4 border-t border-brand-brown/10">
+                    <SelectStatus
+                      status={order.status}
+                      onChange={(novoStatus) => {
+                        setOrders((prev) =>
+                          prev.map((o) =>
+                            o.id === order.id ? { ...o, status: novoStatus } : o
+                          )
+                        );
+                      }}
+                    />
                   </div>
                 </div>
               ))}
@@ -333,7 +388,6 @@ export default function HistoricoPedidosPage() {
         {">"}
       </button>
     </div>
-
 
       {/* FAB */}
       <button className="fixed bottom-6 right-6 flex h-16 w-16 items-center justify-center rounded-full bg-brand-rose text-white shadow-lg hover:scale-105 transition-transform">
