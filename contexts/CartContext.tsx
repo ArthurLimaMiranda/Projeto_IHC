@@ -1,4 +1,4 @@
-// contexts/CartContext.tsx (atualização)
+// contexts/CartContext.tsx
 'use client';
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
@@ -19,6 +19,30 @@ export interface CartItem {
   };
 }
 
+export interface Order {
+  id: string;
+  customer: {
+    name: string;
+    address: string;
+    phone: string;
+    notes?: string;
+  };
+  items: CartItem[];
+  subtotal: number;
+  deliveryFee: number;
+  discount: number;
+  total: number;
+  paymentMethod: string;
+  orderDate: string;
+  estimatedDelivery: string;
+  status: 'PENDING' | 'PREPARING' | 'OUT_FOR_DELIVERY' | 'DELIVERED';
+  timeline: Array<{
+    status: string;
+    timestamp: string;
+    description: string;
+  }>;
+}
+
 interface CartContextType {
   cartItems: CartItem[];
   addToCart: (item: CartItem) => void;
@@ -27,9 +51,16 @@ interface CartContextType {
   clearCart: () => void;
   getCartTotal: () => number;
   getCartItemsCount: () => number;
-  // Novo: Salvar dados do pedido para rastreamento
-  saveOrder: (orderData: any) => void;
-  getOrdersByPhone: (phone: string) => any[];
+  
+  // Funções para pedidos
+  saveOrder: (orderData: any) => Order;
+  getOrdersByPhone: (phone: string) => Order[];
+  getAllOrders: () => Order[];
+  updateOrderStatus: (orderId: string, newStatus: Order['status']) => boolean;
+  getOrderById: (orderId: string) => Order | null;
+  getOrdersByStatus: (status: Order['status']) => Order[];
+  calculateRevenue: (period?: 'day' | 'week' | 'month') => number;
+  getPendingOrdersCount: () => number;
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
@@ -41,15 +72,25 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     const savedCart = localStorage.getItem('juju-cart');
     if (savedCart) {
-      setCartItems(JSON.parse(savedCart));
+      try {
+        setCartItems(JSON.parse(savedCart));
+      } catch (error) {
+        console.error('Erro ao carregar carrinho:', error);
+        setCartItems([]);
+      }
     }
   }, []);
 
   // Salvar carrinho no localStorage
   useEffect(() => {
-    localStorage.setItem('juju-cart', JSON.stringify(cartItems));
+    try {
+      localStorage.setItem('juju-cart', JSON.stringify(cartItems));
+    } catch (error) {
+      console.error('Erro ao salvar carrinho:', error);
+    }
   }, [cartItems]);
 
+  // Gerenciamento do carrinho
   const addToCart = (item: CartItem) => {
     setCartItems(prev => {
       const existingItem = prev.find(cartItem => cartItem.id === item.id);
@@ -90,34 +131,146 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return cartItems.reduce((count, item) => count + item.quantity, 0);
   };
 
+  // Funções para pedidos - Gerenciamento completo
+  const getAllOrders = (): Order[] => {
+    try {
+      return JSON.parse(localStorage.getItem('juju-orders') || '[]');
+    } catch (error) {
+      console.error('Erro ao buscar pedidos:', error);
+      return [];
+    }
+  };
+
   // Salvar pedido para rastreamento
-  const saveOrder = (orderData: any) => {
-    const orders = JSON.parse(localStorage.getItem('juju-orders') || '[]');
-    const newOrder = {
+  const saveOrder = (orderData: any): Order => {
+    const orders = getAllOrders();
+    const newOrder: Order = {
       ...orderData,
-      id: 'JUJU' + Date.now().toString().slice(-6),
+      id: 'JUJU' + Date.now().toString().slice(-8),
       orderDate: new Date().toISOString(),
-      status: 'PENDING',
+      status: 'PENDING' as const,
       timeline: [
         {
           status: 'PENDING',
           timestamp: new Date().toISOString(),
-          description: 'Pedido recebido'
+          description: 'Pedido recebido e confirmado'
         }
       ]
     };
     
-    orders.push(newOrder);
-    localStorage.setItem('juju-orders', JSON.stringify(orders));
+    // Verificar se já existe um pedido com o mesmo ID
+    const orderExists = orders.some((order: Order) => order.id === newOrder.id);
+    if (!orderExists) {
+      orders.push(newOrder);
+      try {
+        localStorage.setItem('juju-orders', JSON.stringify(orders));
+        // Disparar evento para outros componentes
+        window.dispatchEvent(new Event('storage'));
+      } catch (error) {
+        console.error('Erro ao salvar pedido:', error);
+      }
+    }
+    
     return newOrder;
   };
 
   // Buscar pedidos por telefone
-  const getOrdersByPhone = (phone: string) => {
-    const orders = JSON.parse(localStorage.getItem('juju-orders') || '[]');
-    return orders.filter((order: any) => 
-      order.customer.phone.replace(/\D/g, '') === phone.replace(/\D/g, '')
+  const getOrdersByPhone = (phone: string): Order[] => {
+    const orders = getAllOrders();
+    const formattedPhone = phone.replace(/\D/g, '');
+    return orders.filter(order => 
+      order.customer.phone.replace(/\D/g, '') === formattedPhone
     );
+  };
+
+  // Buscar pedido por ID
+  const getOrderById = (orderId: string): Order | null => {
+    const orders = getAllOrders();
+    return orders.find(order => order.id === orderId) || null;
+  };
+
+  // Buscar pedidos por status
+  const getOrdersByStatus = (status: Order['status']): Order[] => {
+    const orders = getAllOrders();
+    return orders.filter(order => order.status === status);
+  };
+
+  // Atualizar status do pedido
+  const updateOrderStatus = (orderId: string, newStatus: Order['status']): boolean => {
+    try {
+      const orders = getAllOrders();
+      const updatedOrders = orders.map(order => {
+        if (order.id === orderId) {
+          const updatedOrder: Order = {
+            ...order,
+            status: newStatus,
+            timeline: [
+              ...order.timeline,
+              {
+                status: newStatus,
+                timestamp: new Date().toISOString(),
+                description: getStatusDescription(newStatus)
+              }
+            ]
+          };
+          return updatedOrder;
+        }
+        return order;
+      });
+      
+      localStorage.setItem('juju-orders', JSON.stringify(updatedOrders));
+      // Disparar evento para atualizar outros componentes
+      window.dispatchEvent(new Event('storage'));
+      return true;
+    } catch (error) {
+      console.error('Erro ao atualizar status:', error);
+      return false;
+    }
+  };
+
+  const getStatusDescription = (status: Order['status']): string => {
+    switch (status) {
+      case 'PENDING': return 'Pedido recebido';
+      case 'PREPARING': return 'Pedido em produção';
+      case 'OUT_FOR_DELIVERY': return 'Pedido saiu para entrega';
+      case 'DELIVERED': return 'Pedido entregue';
+      default: return 'Status atualizado';
+    }
+  };
+
+  // Calcular receita por período
+  const calculateRevenue = (period: 'day' | 'week' | 'month' = 'week'): number => {
+    const orders = getAllOrders();
+    const now = new Date();
+    let startDate: Date;
+
+    switch (period) {
+      case 'day':
+        startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        break;
+      case 'week':
+        startDate = new Date(now);
+        startDate.setDate(now.getDate() - 7);
+        break;
+      case 'month':
+        startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+        break;
+      default:
+        startDate = new Date(now);
+        startDate.setDate(now.getDate() - 7);
+    }
+
+    return orders
+      .filter(order => new Date(order.orderDate) >= startDate)
+      .reduce((total, order) => total + order.total, 0);
+  };
+
+  // Contar pedidos pendentes
+  const getPendingOrdersCount = (): number => {
+    const orders = getAllOrders();
+    return orders.filter(order => 
+      order.status === 'PENDING' || order.status === 'PREPARING'
+    ).length;
   };
 
   return (
@@ -130,7 +283,13 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
       getCartTotal,
       getCartItemsCount,
       saveOrder,
-      getOrdersByPhone
+      getOrdersByPhone,
+      getAllOrders,
+      updateOrderStatus,
+      getOrderById,
+      getOrdersByStatus,
+      calculateRevenue,
+      getPendingOrdersCount
     }}>
       {children}
     </CartContext.Provider>
