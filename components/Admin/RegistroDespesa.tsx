@@ -34,7 +34,7 @@ const subcategories = ["Farinhas", "Laticínios", "Açúcares", "Frutas"];
 const paymentTypes = ["Cartão de Crédito", "Cartão de Débito", "PIX", "Dinheiro"];
 
 export default function RegistroDespesa() {
-    const router = useRouter();
+  const router = useRouter();
   const [selectedCategory, setSelectedCategory] = useState("Ingredientes");
 
   return (
