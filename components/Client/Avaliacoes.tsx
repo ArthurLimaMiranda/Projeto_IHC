@@ -170,7 +170,7 @@ export function Avaliacoes() {
                   
                   {/* Comentário */}
                   <p className="text-gray-600 leading-relaxed">
-                    "{avaliacao.comentario}"
+                    &ldquo;{avaliacao.comentario}&rdquo;
                   </p>
                   
                   {/* Data */}
@@ -205,7 +205,7 @@ export function Avaliacoes() {
             
             {/* Comentário */}
             <p className="text-gray-600 leading-relaxed">
-              "{avaliacao.comentario}"
+              &ldquo;{avaliacao.comentario}&rdquo;
             </p>
             
             {/* Data */}
