@@ -208,7 +208,7 @@ export default function DetalhesDeclaracao() {
         <section className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
           <h3 className="text-lg font-bold text-[#4F2712] mb-3">Status da Declaração</h3>
           <div className="flex items-center gap-3">
-            <div className={`px-4 py-2 rounded-full font-semibold ${
+            <div className={`w-[40%] px-4 py-2 rounded-full font-semibold ${
               declaration.status === 'submitted' ? 'bg-green-100 text-green-800' :
               declaration.status === 'draft' ? 'bg-yellow-100 text-yellow-800' :
               'bg-gray-100 text-gray-800'
@@ -218,7 +218,7 @@ export default function DetalhesDeclaracao() {
                declaration.status}
             </div>
             {declaration.submittedAt && (
-              <span className="text-sm text-gray-600">
+              <span className="text-sm text-gray-600 w-[60%]">
                 Enviada em {formatDate(declaration.submittedAt)}
               </span>
             )}

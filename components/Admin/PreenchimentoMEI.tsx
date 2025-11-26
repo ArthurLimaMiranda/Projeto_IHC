@@ -106,13 +106,12 @@ export default function PreenchimentoMEI() {
   return (
     <div className="min-h-screen bg-[#FFFFF4] pb-24">
       {/* Header */}
-      <header className="flex items-center bg-[#EEEDDF] p-4 justify-between sticky top-0 z-10">
+      <header className="flex items-center bg-[#EEEDDF] gap-x-2s p-4 py-5 justify-between sticky top-0 z-10">
         <ArrowLeftIcon 
           className="w-7 h-7 cursor-pointer text-[#4F2712]" 
           onClick={() => router.back()} 
         />
         <h1 className="text-lg font-bold text-[#4F2712]">Pré-preenchimento DASN-SIMEI</h1>
-        <QuestionMarkCircleIcon className="w-7 h-7 text-[#4F2712]" />
       </header>
 
       <main className="p-4 space-y-6">

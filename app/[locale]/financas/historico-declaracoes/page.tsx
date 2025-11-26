@@ -198,7 +198,7 @@ export default function HistoricoDeclaracoes() {
                 .map(declaration => (
                   <div key={declaration.id} className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
                     <div className="flex items-start justify-between mb-3">
-                      <div>
+                      <div className="w-[70%]">
                         <h3 className="font-bold text-[#B95760] text-lg">
                           Declaração {declaration.year}
                         </h3>
@@ -210,7 +210,7 @@ export default function HistoricoDeclaracoes() {
                         </p>
                       </div>
                       
-                      <div className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(declaration.status)}`}>
+                      <div className={`w-[30%] flex px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(declaration.status)}`}>
                         {getStatusIcon(declaration.status)}
                         <span className="ml-1">{getStatusText(declaration.status)}</span>
                       </div>
