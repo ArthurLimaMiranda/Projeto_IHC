@@ -393,7 +393,7 @@ export default function RegistroDespesa() {
             <h2 className="text-lg font-bold text-[#4F2712] text-center mb-3">
               Confirmar Registro
             </h2>
-            <p class="text-gray-700 text-center mb-6">
+            <p className="text-gray-700 text-center mb-6">
               Deseja registrar esta despesa?
             </p>
 

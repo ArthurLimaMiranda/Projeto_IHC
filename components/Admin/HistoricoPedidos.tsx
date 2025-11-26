@@ -1,28 +1,49 @@
 "use client";
 import React, { useEffect, useRef, useState } from "react";
-import Image from "next/image";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
-
 import {
   ArrowLeftIcon,
   ChevronRightIcon,
-  CheckCircleIcon,
   ChevronDownIcon,
   QuestionMarkCircleIcon,
   CakeIcon,
 } from "@heroicons/react/24/outline";
-
 import { useRouter } from "next/navigation";
 import MenuInferior from "./MenuInferior";
 
+interface FormattedOrder {
+  id: string;
+  client: string;
+  deliveryDate: string;
+  price: number;
+  description: string;
+  image: string;
+  status: string;
+  orderData: any;
+}
+
+interface PendingDelivery {
+  id: string;
+  title: string;
+  date: string;
+  image: string;
+  status: string;
+}
+
+interface DragInfo {
+  offset: {
+    x: number;
+    y: number;
+  };
+}
+
 export default function HistoricoPedidosPage() {
   const router = useRouter();
-
-  // --------------------------------------------------------
-  // STATE: orders é a fonte da verdade - agora busca do localStorage
-  // --------------------------------------------------------
-  const [orders, setOrders] = useState([]);
+  const [orders, setOrders] = useState<FormattedOrder[]>([]);
+  const pendRef = useRef<HTMLDivElement>(null);
+  const [pendWidth, setPendWidth] = useState(0);
+  const [pendIndex, setPendIndex] = useState(0);
 
   // Carregar pedidos do localStorage
   useEffect(() => {
@@ -30,19 +51,21 @@ export default function HistoricoPedidosPage() {
       try {
         const savedOrders = JSON.parse(localStorage.getItem('juju-orders') || '[]');
         
-        const formattedOrders = savedOrders.map(order => ({
+        const formattedOrders: FormattedOrder[] = savedOrders.map((order: any) => ({
           id: order.id,
           client: order.customer.name,
           deliveryDate: formatarDataEntrega(order.estimatedDelivery),
           price: order.total,
-          description: order.items.map(item => item.name).join(', '),
+          description: order.items.map((item: any) => item.name).join(', '),
           image: order.items[0]?.image || 'https://picsum.photos/200?4',
           status: order.status,
-          orderData: order // Manter dados completos para referência
+          orderData: order
         }));
 
         // Ordenar por data de entrega (mais recente primeiro)
-        formattedOrders.sort((a, b) => new Date(b.orderData.estimatedDelivery) - new Date(a.orderData.estimatedDelivery));
+        formattedOrders.sort((a: FormattedOrder, b: FormattedOrder) => 
+          new Date(b.orderData.estimatedDelivery).getTime() - new Date(a.orderData.estimatedDelivery).getTime()
+        );
         
         setOrders(formattedOrders);
       } catch (error) {
@@ -59,7 +82,7 @@ export default function HistoricoPedidosPage() {
     return () => window.removeEventListener('storage', handleStorageChange);
   }, []);
 
-  const formatarDataEntrega = (dataISO) => {
+  const formatarDataEntrega = (dataISO: string): string => {
     const data = new Date(dataISO);
     return data.toLocaleDateString('pt-BR', {
       day: '2-digit',
@@ -73,10 +96,6 @@ export default function HistoricoPedidosPage() {
   // --------------------------------------------------------
   // PENDINGS CAROUSEL (horizontal)
   // --------------------------------------------------------
-  const pendRef = useRef(null);
-  const [pendWidth, setPendWidth] = useState(0);
-  const [pendIndex, setPendIndex] = useState(0);
-
   // Recalcular width quando orders mudarem
   useEffect(() => {
     const update = () => {
@@ -90,7 +109,7 @@ export default function HistoricoPedidosPage() {
   }, [orders]);
 
   // Pedidos pendentes para o carrossel
-  const pendingDeliveries = orders
+  const pendingDeliveries: PendingDelivery[] = orders
     .filter(order => order.status !== "DELIVERED")
     .map(order => ({
       id: order.id,
@@ -110,9 +129,9 @@ export default function HistoricoPedidosPage() {
   }, [pendingDeliveries.length]);
 
   const PEND_ITEM_WIDTH = 304;
-  const pendGetX = () => -pendIndex * PEND_ITEM_WIDTH;
+  const pendGetX = (): number => -pendIndex * PEND_ITEM_WIDTH;
 
-  const handlePendDragEnd = (e, info) => {
+  const handlePendDragEnd = (e: any, info: DragInfo) => {
     if (pendingDeliveries.length <= 1) return;
     const threshold = 80;
     if (info.offset.x > threshold) {
@@ -122,7 +141,7 @@ export default function HistoricoPedidosPage() {
     }
   };
 
-  const goToPend = (i) => setPendIndex(i);
+  const goToPend = (i: number) => setPendIndex(i);
   const pendPrev = () => setPendIndex((p) => (p === 0 ? Math.max(0, pendingDeliveries.length - 1) : p - 1));
   const pendNext = () => setPendIndex(p => (pendingDeliveries.length === 0 ? 0 : (p + 1) % pendingDeliveries.length));
 
@@ -139,7 +158,7 @@ export default function HistoricoPedidosPage() {
     setPage(prev => Math.min(prev, totalPages - 1));
   }, [totalPages]);
 
-  const paginate = (newDirection) => {
+  const paginate = (newDirection: number) => {
     setDirection(newDirection);
     setPage((prev) => Math.min(Math.max(prev + newDirection, 0), totalPages - 1));
   };
@@ -150,15 +169,19 @@ export default function HistoricoPedidosPage() {
   );
 
   const variants = {
-    enter: (dir) => ({ y: dir > 0 ? 300 : -300, opacity: 0 }),
+    enter: (dir: number) => ({ y: dir > 0 ? 300 : -300, opacity: 0 }),
     center: { y: 0, opacity: 1 },
-    exit: (dir) => ({ y: dir > 0 ? -300 : 300, opacity: 0 }),
+    exit: (dir: number) => ({ y: dir > 0 ? -300 : 300, opacity: 0 }),
   };
 
   // --------------------------------------------------------
   // SelectStatus - ATUALIZADO para salvar no localStorage
   // --------------------------------------------------------
-  function SelectStatus({ status, orderId, onChange }) {
+  function SelectStatus({ status, orderId, onChange }: { 
+    status: string; 
+    orderId: string; 
+    onChange: (newStatus: string) => void;
+  }) {
     const [open, setOpen] = useState(false);
 
     const options = [
@@ -170,10 +193,10 @@ export default function HistoricoPedidosPage() {
 
     const current = options.find((o) => o.id === status) || options[0];
 
-    const handleStatusChange = (novoStatus) => {
+    const handleStatusChange = (novoStatus: string) => {
       // Atualizar no localStorage
       const savedOrders = JSON.parse(localStorage.getItem('juju-orders') || '[]');
-      const updatedOrders = savedOrders.map(order => {
+      const updatedOrders = savedOrders.map((order: any) => {
         if (order.id === orderId) {
           const updatedOrder = {
             ...order,
@@ -202,7 +225,7 @@ export default function HistoricoPedidosPage() {
       setOpen(false);
     };
 
-    const getStatusDescription = (status) => {
+    const getStatusDescription = (status: string): string => {
       switch (status) {
         case 'PREPARING': return 'Pedido em produção';
         case 'OUT_FOR_DELIVERY': return 'Pedido saiu para entrega';
@@ -239,9 +262,6 @@ export default function HistoricoPedidosPage() {
     );
   }
 
-  // --------------------------------------------------------
-  // RENDER
-  // --------------------------------------------------------
   return (
     <div className="relative flex h-auto min-h-screen w-full flex-col bg-[#FFFFF4] overflow-hidden">
       {/* TOP BAR */}
@@ -265,24 +285,23 @@ export default function HistoricoPedidosPage() {
       </header>
 
       {/* AVISO DA AGENDA */}
-    <div className="px-4 pt-6">
-      <div className="w-full bg-[#FFF5D6] border border-[#E6C27A] text-[#4F2712] rounded-xl p-4 shadow-sm flex items-start gap-3">
-        <svg className="w-6 h-6 flex-shrink-0 mt-0.5 text-[#B95760]" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth="2"
-            d="M12 9v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-          />
-        </svg>
+      <div className="px-4 pt-6">
+        <div className="w-full bg-[#FFF5D6] border border-[#E6C27A] text-[#4F2712] rounded-xl p-4 shadow-sm flex items-start gap-3">
+          <svg className="w-6 h-6 flex-shrink-0 mt-0.5 text-[#B95760]" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth="2"
+              d="M12 9v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+            />
+          </svg>
 
-        <p className="text-sm leading-relaxed">
-          Aqui você pode visualizar suas entregas próximas.<br />
-          Para acompanhar todos os pedidos com horários mais detalhados, acesse <Link href="/historico-pedidos/agenda" className="font-semibold">Agenda</Link>.
-        </p>
+          <p className="text-sm leading-relaxed">
+            Aqui você pode visualizar suas entregas próximas.<br />
+            Para acompanhar todos os pedidos com horários mais detalhados, acesse <Link href="/historico-pedidos/agenda" className="font-semibold">Agenda</Link>.
+          </p>
+        </div>
       </div>
-    </div>
-
 
       {/* ENTREGAS PENDENTES */}
       <h2 className="text-lg font-bold px-4 pb-2 pt-6 text-[#4F2712]">
@@ -401,7 +420,7 @@ export default function HistoricoPedidosPage() {
             transition={{ duration: 0.35 }}
             drag="y"
             dragConstraints={{ top: 0, bottom: 0 }}
-            onDragEnd={(e, info) => {
+            onDragEnd={(e: any, info: DragInfo) => {
               if (info.offset.y < -120) paginate(1);
               else if (info.offset.y > 120) paginate(-1);
             }}
@@ -444,7 +463,7 @@ export default function HistoricoPedidosPage() {
                       <SelectStatus
                         status={order.status}
                         orderId={order.id}
-                        onChange={(novoStatus) => {
+                        onChange={(novoStatus: string) => {
                           setOrders((prev) =>
                             prev.map((o) =>
                               o.id === order.id ? { ...o, status: novoStatus } : o

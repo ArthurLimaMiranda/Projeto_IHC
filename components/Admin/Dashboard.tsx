@@ -16,6 +16,15 @@ import {
 } from "@heroicons/react/24/solid";
 import { PencilSquareIcon } from "@heroicons/react/24/outline";
 
+interface Entrega {
+  id: string;
+  nome: string;
+  produto: string;
+  horario: string;
+  status: string;
+  statusCor: string;
+}
+
 // ------------------------------
 // COMPONENTE PRINCIPAL
 // ------------------------------
@@ -27,6 +36,7 @@ export default function Dashboard() {
   const [pedidosPendentes, setPedidosPendentes] = useState(0);
 
   // Buscar dados reais do localStorage
+   // Buscar dados reais do localStorage
   useEffect(() => {
     const carregarDados = () => {
       try {
@@ -37,21 +47,21 @@ export default function Dashboard() {
         umaSemanaAtras.setDate(umaSemanaAtras.getDate() - 7);
         
         const receitaSemanal = orders
-          .filter(order => new Date(order.orderDate) >= umaSemanaAtras)
-          .reduce((total, order) => total + order.total, 0);
+          .filter((order: any) => new Date(order.orderDate) >= umaSemanaAtras)
+          .reduce((total: number, order: any) => total + order.total, 0);
         
         setReceitaSemana(receitaSemanal);
 
         // Calcular receita de hoje
         const hoje = new Date().toDateString();
-        const receitaHoje = orders
-          .filter(order => new Date(order.orderDate).toDateString() === hoje)
-          .reduce((total, order) => total + order.total, 0);
+        const receitaHojeCalc = orders
+          .filter((order: any) => new Date(order.orderDate).toDateString() === hoje)
+          .reduce((total: number, order: any) => total + order.total, 0);
         
-        setReceitaHoje(receitaHoje);
+        setReceitaHoje(receitaHojeCalc);
 
         // Contar pedidos pendentes
-        const pendentes = orders.filter(order => 
+        const pendentes = orders.filter((order: any) => 
           order.status === 'PENDING' || order.status === 'PREPARING'
         ).length;
         
@@ -59,12 +69,13 @@ export default function Dashboard() {
 
         // Próximas entregas (últimos 3 pedidos pendentes)
         const proximasEntregas = orders
-          .filter(order => order.status === 'PENDING' || order.status === 'PREPARING')
-          .sort((a, b) => new Date(a.estimatedDelivery) - new Date(b.estimatedDelivery))
+          .filter((order: any) => order.status === 'PENDING' || order.status === 'PREPARING')
+          .sort((a: any, b: any) => new Date(a.estimatedDelivery).getTime() - new Date(b.estimatedDelivery).getTime())
           .slice(0, 3)
-          .map(order => ({
+          .map((order: any) => ({
+            id: order.id,
             nome: order.customer.name,
-            produto: order.items.map(item => item.name).join(', '),
+            produto: order.items.map((item: any) => item.name).join(', '),
             horario: formatarDataEntrega(order.estimatedDelivery),
             status: getStatusText(order.status),
             statusCor: getStatusColor(order.status)
@@ -85,7 +96,7 @@ export default function Dashboard() {
     return () => window.removeEventListener('storage', handleStorageChange);
   }, []);
 
-  const formatarDataEntrega = (dataISO) => {
+  const formatarDataEntrega = (dataISO: string) => {
     const data = new Date(dataISO);
     const hoje = new Date();
     const amanha = new Date(hoje);
@@ -106,7 +117,7 @@ export default function Dashboard() {
     }
   };
 
-  const getStatusText = (status) => {
+  const getStatusText = (status: string) => {
     switch (status) {
       case 'PENDING': return 'Aguardando Confirmação';
       case 'PREPARING': return 'Em produção';
@@ -116,7 +127,7 @@ export default function Dashboard() {
     }
   };
 
-  const getStatusColor = (status) => {
+  const getStatusColor = (status: string) => {
     switch (status) {
       case 'PENDING': return 'text-orange-600 dark:text-orange-400';
       case 'PREPARING': return 'text-yellow-600 dark:text-yellow-400';
@@ -235,17 +246,15 @@ export default function Dashboard() {
       <div className="flex flex-col gap-2 px-4">
         <div className="max-h-72 overflow-y-auto">
           {entregas.length > 0 ? (
-            entregas.map((entrega, index) => (
+            entregas.map((entrega: any, index: number) => (
               <div 
                 key={index} 
                 className="flex items-center gap-4 rounded-lg bg-white p-3 cursor-pointer hover:shadow-md transition-shadow"
                 onClick={() => {
-                  // Aqui você precisaria buscar o ID do pedido correspondente
-                  // Pode ser necessário ajustar para salvar o ID nas entregas
-                  const orders = JSON.parse(localStorage.getItem('juju-orders') || '[]');
-                  const order = orders.find(o => 
+                  const orders: any[] = JSON.parse(localStorage.getItem('juju-orders') || '[]');
+                  const order = orders.find((o: any) => 
                     o.customer.name === entrega.nome && 
-                    o.items.some(item => item.name.includes(entrega.produto.split(',')[0]))
+                    o.items.some((item: any) => item.name.includes(entrega.produto.split(',')[0]))
                   );
                   if (order) {
                     window.location.href = `/historico-pedidos/${order.id}`;
@@ -277,7 +286,6 @@ export default function Dashboard() {
           )}
         </div>
       </div>
-
       {/* ------------------------------------ */}
       {/* GRÁFICO DE VENDAS */}
       {/* ------------------------------------ */}
@@ -306,7 +314,7 @@ export default function Dashboard() {
 // --------------------------------------------------------
 // GRÁFICO DINÂMICO ATUALIZADO
 // --------------------------------------------------------
-function GraficoLinha({ periodo, orders }) {
+function GraficoLinha({ periodo, orders }: { periodo: string; orders: any[] }) {
   // Calcular dados baseados nos pedidos reais
   const calcularDados = () => {
     const ordersData = JSON.parse(localStorage.getItem('juju-orders') || '[]');
@@ -314,7 +322,7 @@ function GraficoLinha({ periodo, orders }) {
     if (periodo === "semanal") {
       const dias = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
       const hoje = new Date();
-      const semana = [];
+      const semana: number[] = [];
       
       for (let i = 6; i >= 0; i--) {
         const data = new Date(hoje);
@@ -322,8 +330,8 @@ function GraficoLinha({ periodo, orders }) {
         const diaStr = data.toDateString();
         
         const totalDia = ordersData
-          .filter(order => new Date(order.orderDate).toDateString() === diaStr)
-          .reduce((sum, order) => sum + order.total, 0);
+          .filter((order: any) => new Date(order.orderDate).toDateString() === diaStr)
+          .reduce((sum: number, order: any) => sum + order.total, 0);
         
         semana.push(totalDia);
       }
@@ -347,9 +355,12 @@ function GraficoLinha({ periodo, orders }) {
       anual: ["2019", "2020", "2021", "2022", "2023", "2024"],
     };
 
+    const periodoKey = periodo as keyof typeof dados;
+    const labelsKey = periodo as keyof typeof labels;
+
     return {
-      valores: dados[periodo],
-      categorias: labels[periodo]
+      valores: dados[periodoKey] || [],
+      categorias: labels[labelsKey] || []
     };
   };
 

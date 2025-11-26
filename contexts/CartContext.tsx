@@ -15,7 +15,7 @@ export interface CartItem {
     frosting: string;
     toppings: string[];
     addOns: string[];
-    extras: Array<{ name: string; quantity: number }>; // Agora é array de objetos
+    extras: Array<{ name: string; quantity: number }>;
   };
   orderInfo?: {
     customerName: string;
@@ -95,58 +95,6 @@ export interface TaxReminder {
   completed: boolean;
 }
 
-interface CartContextType {
-  cartItems: CartItem[];
-  addToCart: (item: CartItem) => void;
-  updateQuantity: (id: number, quantity: number) => void;
-  removeFromCart: (id: number) => void;
-  clearCart: () => void;
-  getCartTotal: () => number;
-  getCartItemsCount: () => number;
-  
-  // Funções para pedidos
-  saveOrder: (orderData: any) => Order;
-  getOrdersByPhone: (phone: string) => Order[];
-  getAllOrders: () => Order[];
-  updateOrderStatus: (orderId: string, newStatus: Order['status']) => boolean;
-  getOrderById: (orderId: string) => Order | null;
-  getOrdersByStatus: (status: Order['status']) => Order[];
-  calculateRevenue: (period?: 'day' | 'week' | 'month') => number;
-  getPendingOrdersCount: () => number;
-  
-  // Funções para agenda
-  getOrdersGroupedByDeliveryDate: () => Record<string, Order[]>;
-  getOrdersByDeliveryDate: (date: string) => Order[];
-  getUpcomingOrders: (days?: number) => Order[];
-  getTodayOrders: () => Order[];
-  updateOrderDeliveryDate: (orderId: string, newDeliveryDate: string) => boolean;
-  // Funções para finanças
-  
-  addExpense: (expense: Expense) => string;
-  getExpenses: () => Expense[];
-  getExpensesByPeriod: (startDate: string, endDate: string) => Expense[];
-  getExpensesByCategory: (category: string) => Expense[];
-  calculateTotalExpenses: (period?: 'day' | 'week' | 'month') => number;
-  getFinancialSummary: (period?: 'month' | '30days' | 'year') => FinancialSummary;
-  getRevenueVsExpenses: (weeks?: number) => RevenueExpenseData[];
-  getProfitEvolution: (months?: number) => ProfitData[];
-  saveBusinessInfo: (businessInfo: BusinessInfo) => void;
-  getBusinessInfo: () => BusinessInfo | null;
-
-  saveTaxDeclaration: (declaration: Omit<TaxDeclaration, 'id'>) => string;
-  getTaxDeclarations: () => TaxDeclaration[];
-  getTaxDeclaration: (id: string) => TaxDeclaration | null;
-  updateTaxDeclarationStatus: (id: string, status: TaxDeclaration['status']) => boolean;
-  getTaxReminders: () => TaxReminder[];
-  markReminderAsCompleted: (id: string) => boolean;
-  generatePreFilledDeclaration: () => Partial<TaxDeclaration['data']>;
-  calculateTaxObligations: (annualRevenue: number) => {
-    dasValue: number;
-    dueDates: string[];
-    observations: string[];
-  };
-}
-
 export interface Expense {
   id: string;
   amount: number;
@@ -201,6 +149,58 @@ export interface BusinessInfo {
     monthlyRevenue: number;
     annualRevenue: number;
     additionalInfo?: string;
+  };
+}
+
+interface CartContextType {
+  cartItems: CartItem[];
+  addToCart: (item: CartItem) => void;
+  updateQuantity: (id: number, quantity: number) => void;
+  removeFromCart: (id: number) => void;
+  clearCart: () => void;
+  getCartTotal: () => number;
+  getCartItemsCount: () => number;
+  
+  // Funções para pedidos
+  saveOrder: (orderData: any) => Order;
+  getOrdersByPhone: (phone: string) => Order[];
+  getAllOrders: () => Order[];
+  updateOrderStatus: (orderId: string, newStatus: Order['status']) => boolean;
+  getOrderById: (orderId: string) => Order | null;
+  getOrdersByStatus: (status: Order['status']) => Order[];
+  calculateRevenue: (period?: 'day' | 'week' | 'month') => number;
+  getPendingOrdersCount: () => number;
+  
+  // Funções para agenda
+  getOrdersGroupedByDeliveryDate: () => Record<string, Order[]>;
+  getOrdersByDeliveryDate: (date: string) => Order[];
+  getUpcomingOrders: (days?: number) => Order[];
+  getTodayOrders: () => Order[];
+  updateOrderDeliveryDate: (orderId: string, newDeliveryDate: string) => boolean;
+  
+  // Funções para finanças
+  addExpense: (expense: Omit<Expense, 'id'>) => string;
+  getExpenses: () => Expense[];
+  getExpensesByPeriod: (startDate: string, endDate: string) => Expense[];
+  getExpensesByCategory: (category: string) => Expense[];
+  calculateTotalExpenses: (period?: 'day' | 'week' | 'month') => number;
+  getFinancialSummary: (period?: 'month' | '30days' | 'year') => FinancialSummary;
+  getRevenueVsExpenses: (weeks?: number) => RevenueExpenseData[];
+  getProfitEvolution: (months?: number) => ProfitData[];
+  saveBusinessInfo: (businessInfo: BusinessInfo) => void;
+  getBusinessInfo: () => BusinessInfo | null;
+
+  saveTaxDeclaration: (declaration: Omit<TaxDeclaration, 'id'>) => string;
+  getTaxDeclarations: () => TaxDeclaration[];
+  getTaxDeclaration: (id: string) => TaxDeclaration | null;
+  updateTaxDeclarationStatus: (id: string, status: TaxDeclaration['status']) => boolean;
+  getTaxReminders: () => TaxReminder[];
+  markReminderAsCompleted: (id: string) => boolean;
+  generatePreFilledDeclaration: () => Partial<TaxDeclaration['data']>;
+  calculateTaxObligations: (annualRevenue: number) => {
+    dasValue: number;
+    dueDates: string[];
+    observations: string[];
   };
 }
 
@@ -264,11 +264,11 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setCartItems([]);
   };
 
-  const getCartTotal = () => {
+  const getCartTotal = (): number => {
     return cartItems.reduce((total, item) => total + item.price * item.quantity, 0);
   };
 
-  const getCartItemsCount = () => {
+  const getCartItemsCount = (): number => {
     return cartItems.reduce((count, item) => count + item.quantity, 0);
   };
 
@@ -737,6 +737,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     window.dispatchEvent(new Event('storage'));
     return newDeclaration.id;
   };
+
   const getTaxDeclarations = (): TaxDeclaration[] => {
     try {
       return JSON.parse(localStorage.getItem('juju-tax-declarations') || '[]');
@@ -892,8 +893,6 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
   };
 
-
-
   return (
     <CartContext.Provider value={{
       cartItems,
@@ -917,6 +916,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
       getUpcomingOrders,
       getTodayOrders,
       updateOrderDeliveryDate,
+      // Funções de finanças
       addExpense,
       getExpenses,
       getExpensesByPeriod,
@@ -927,6 +927,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
       getProfitEvolution,
       saveBusinessInfo,
       getBusinessInfo,
+      // Funções fiscais
       saveTaxDeclaration,
       getTaxDeclarations,
       getTaxDeclaration,
