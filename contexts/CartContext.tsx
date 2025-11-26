@@ -43,6 +43,47 @@ export interface Order {
   }>;
 }
 
+export interface TaxDeclaration {
+  id: string;
+  year: string;
+  status: 'draft' | 'submitted' | 'approved' | 'rejected';
+  submittedAt?: string;
+  data: {
+    personal: {
+      name: string;
+      cpf: string;
+      email: string;
+      phone: string;
+    };
+    address: {
+      street: string;
+      city: string;
+      state: string;
+    };
+    business: {
+      name: string;
+      productTypes: string;
+      cnpj?: string;
+      cnae?: string;
+    };
+    financial: {
+      monthlyRevenue: number;
+      annualRevenue: number;
+      totalExpenses: number;
+      netProfit: number;
+      additionalInfo?: string;
+    };
+  };
+}
+
+export interface TaxReminder {
+  id: string;
+  title: string;
+  dueDate: string;
+  description: string;
+  completed: boolean;
+}
+
 interface CartContextType {
   cartItems: CartItem[];
   addToCart: (item: CartItem) => void;
@@ -80,6 +121,19 @@ interface CartContextType {
   getProfitEvolution: (months?: number) => ProfitData[];
   saveBusinessInfo: (businessInfo: BusinessInfo) => void;
   getBusinessInfo: () => BusinessInfo | null;
+
+  saveTaxDeclaration: (declaration: Omit<TaxDeclaration, 'id'>) => string;
+  getTaxDeclarations: () => TaxDeclaration[];
+  getTaxDeclaration: (id: string) => TaxDeclaration | null;
+  updateTaxDeclarationStatus: (id: string, status: TaxDeclaration['status']) => boolean;
+  getTaxReminders: () => TaxReminder[];
+  markReminderAsCompleted: (id: string) => boolean;
+  generatePreFilledDeclaration: () => Partial<TaxDeclaration['data']>;
+  calculateTaxObligations: (annualRevenue: number) => {
+    dasValue: number;
+    dueDates: string[];
+    observations: string[];
+  };
 }
 
 export interface Expense {
@@ -656,6 +710,178 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const saveTaxDeclaration = (declarationData: Omit<TaxDeclaration, 'id'>): string => {
+    const declarations = getTaxDeclarations();
+    const newDeclaration: TaxDeclaration = {
+      ...declarationData,
+      id: 'DEC' + Date.now().toString().slice(-8),
+    };
+    
+    if (declarationData.status === 'submitted') {
+      newDeclaration.submittedAt = new Date().toISOString();
+    }
+    
+    declarations.push(newDeclaration);
+    localStorage.setItem('juju-tax-declarations', JSON.stringify(declarations));
+    window.dispatchEvent(new Event('storage'));
+    return newDeclaration.id;
+  };
+  const getTaxDeclarations = (): TaxDeclaration[] => {
+    try {
+      return JSON.parse(localStorage.getItem('juju-tax-declarations') || '[]');
+    } catch (error) {
+      console.error('Erro ao buscar declarações:', error);
+      return [];
+    }
+  };
+
+  const getTaxDeclaration = (id: string): TaxDeclaration | null => {
+    const declarations = getTaxDeclarations();
+    return declarations.find(declaration => declaration.id === id) || null;
+  };
+
+  const updateTaxDeclarationStatus = (id: string, status: TaxDeclaration['status']): boolean => {
+    try {
+      const declarations = getTaxDeclarations();
+      const updatedDeclarations = declarations.map(declaration => {
+        if (declaration.id === id) {
+          const updatedDeclaration = {
+            ...declaration,
+            status,
+            ...(status === 'submitted' && !declaration.submittedAt && { 
+              submittedAt: new Date().toISOString() 
+            })
+          };
+          return updatedDeclaration;
+        }
+        return declaration;
+      });
+      
+      localStorage.setItem('juju-tax-declarations', JSON.stringify(updatedDeclarations));
+      window.dispatchEvent(new Event('storage'));
+      return true;
+    } catch (error) {
+      console.error('Erro ao atualizar status da declaração:', error);
+      return false;
+    }
+  };
+
+  const getTaxReminders = (): TaxReminder[] => {
+    try {
+      const reminders = JSON.parse(localStorage.getItem('juju-tax-reminders') || '[]');
+      
+      // Se não houver lembretes, criar alguns padrões
+      if (reminders.length === 0) {
+        const defaultReminders: TaxReminder[] = [
+          {
+            id: 'REM1',
+            title: 'Pagamento do DAS',
+            dueDate: new Date(new Date().getFullYear(), new Date().getMonth(), 20).toISOString().split('T')[0],
+            description: 'Pagamento mensal do Documento de Arrecadação do Simples Nacional',
+            completed: false
+          },
+          {
+            id: 'REM2',
+            title: 'Declaração Anual DASN-SIMEI',
+            dueDate: new Date(new Date().getFullYear(), 4, 31).toISOString().split('T')[0], // 31 de Maio
+            description: 'Declaração anual de faturamento para MEI',
+            completed: false
+          }
+        ];
+        localStorage.setItem('juju-tax-reminders', JSON.stringify(defaultReminders));
+        return defaultReminders;
+      }
+      
+      return reminders;
+    } catch (error) {
+      console.error('Erro ao buscar lembretes:', error);
+      return [];
+    }
+  };
+
+  const markReminderAsCompleted = (id: string): boolean => {
+    try {
+      const reminders = getTaxReminders();
+      const updatedReminders = reminders.map(reminder => 
+        reminder.id === id ? { ...reminder, completed: true } : reminder
+      );
+      
+      localStorage.setItem('juju-tax-reminders', JSON.stringify(updatedReminders));
+      window.dispatchEvent(new Event('storage'));
+      return true;
+    } catch (error) {
+      console.error('Erro ao marcar lembrete como concluído:', error);
+      return false;
+    }
+  };
+
+  const generatePreFilledDeclaration = (): Partial<TaxDeclaration['data']> => {
+    const businessInfo = getBusinessInfo();
+    const financialSummary = getFinancialSummary('year');
+    const expenses = getExpenses();
+    
+    const totalExpenses = expenses.reduce((sum, expense) => sum + expense.amount, 0);
+    
+    return {
+      personal: businessInfo?.personal || {
+        name: '',
+        cpf: '',
+        email: '',
+        phone: ''
+      },
+      address: businessInfo?.address || {
+        street: '',
+        city: '',
+        state: ''
+      },
+      business: businessInfo?.business || {
+        name: '',
+        productTypes: '',
+        cnpj: '',
+        cnae: ''
+      },
+      financial: {
+        monthlyRevenue: businessInfo?.financial.monthlyRevenue || 0,
+        annualRevenue: financialSummary.totalRevenue,
+        totalExpenses: totalExpenses,
+        netProfit: financialSummary.netProfit,
+        additionalInfo: businessInfo?.financial.additionalInfo || ''
+      }
+    };
+  };
+
+  const calculateTaxObligations = (annualRevenue: number) => {
+    // Cálculo simplificado do DAS para MEI (valores de 2024)
+    let dasValue = 0;
+    
+    if (annualRevenue <= 81000) {
+      dasValue = 77.10; // Valor fixo para MEI em 2024
+    } else {
+      // Para faturamento acima do limite MEI (caso tenha ultrapassado)
+      dasValue = Math.min(77.10 + (annualRevenue - 81000) * 0.03, 77.10 * 1.5);
+    }
+    
+    const dueDates = [
+      '20/' + (new Date().getMonth() + 2).toString().padStart(2, '0') + '/' + new Date().getFullYear(),
+      '20/' + (new Date().getMonth() + 3).toString().padStart(2, '0') + '/' + new Date().getFullYear(),
+      '20/' + (new Date().getMonth() + 4).toString().padStart(2, '0') + '/' + new Date().getFullYear()
+    ];
+    
+    const observations = [
+      'MEI - Microempreendedor Individual',
+      'Valor do DAS: R$ ' + dasValue.toFixed(2),
+      'Próximo vencimento: ' + dueDates[0],
+      annualRevenue > 81000 ? 'ATENÇÃO: Faturamento próximo do limite anual do MEI' : 'Faturamento dentro do limite MEI'
+    ];
+    
+    return {
+      dasValue,
+      dueDates,
+      observations
+    };
+  };
+
+
 
   return (
     <CartContext.Provider value={{
@@ -689,7 +915,15 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
       getRevenueVsExpenses,
       getProfitEvolution,
       saveBusinessInfo,
-      getBusinessInfo
+      getBusinessInfo,
+      saveTaxDeclaration,
+      getTaxDeclarations,
+      getTaxDeclaration,
+      updateTaxDeclarationStatus,
+      getTaxReminders,
+      markReminderAsCompleted,
+      generatePreFilledDeclaration,
+      calculateTaxObligations
     }}>
       {children}
     </CartContext.Provider>

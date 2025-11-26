@@ -24,7 +24,7 @@ import { useCart } from "@/contexts/CartContext";
 
 export default function FinancasPage() {
   const router = useRouter();
-  const { getFinancialSummary, getExpenses, getAllOrders } = useCart();
+  const { getFinancialSummary, getExpenses, getAllOrders, getTaxDeclarations } = useCart();
   
   const [financialSummary, setFinancialSummary] = useState({
     totalRevenue: 0,
@@ -209,12 +209,20 @@ export default function FinancasPage() {
 
           <div className="flex flex-col gap-4 rounded-xl bg-white p-4 shadow-sm border border-gray-100">
             <div>
-              <h3 className="font-semibold text-text-main text-[#4F2712]">Declaração Anual 2024</h3>
-              <p className="text-sm text-text-main/70 mb-3">Status: Pendente</p>
+              <h3 className="font-semibold text-text-main text-[#4F2712]">Declaração Anual {new Date().getFullYear()}</h3>
+              <p className="text-sm text-text-main/70 mb-3">
+                Status: {getTaxDeclarations().some(d => d.year === new Date().getFullYear().toString() && d.status === 'submitted') 
+                  ? 'Enviada' 
+                  : 'Pendente'
+                }
+              </p>
               <Link href="/financas/preenchimento-mei">
                 <button className="flex w-full h-12 items-center justify-center gap-2 rounded-lg bg-[#B95760] px-5 text-white font-semibold hover:bg-[#A0464E] transition-colors">
                   <PencilSquareIcon className="w-6 h-6" />
-                  Iniciar Pré-preenchimento
+                  {getTaxDeclarations().some(d => d.year === new Date().getFullYear().toString()) 
+                    ? 'Revisar Declaração' 
+                    : 'Iniciar Pré-preenchimento'
+                  }
                 </button>
               </Link>
             </div>
@@ -228,17 +236,21 @@ export default function FinancasPage() {
 
                 <div>
                   <p className="font-semibold text-text-main text-[#4F2712]">Próximo Vencimento do DAS</p>
-                  <p className="text-sm text-text-main/70 text-[#96624D]">20 de Julho de 2024</p>
+                  <p className="text-sm text-text-main/70 text-[#96624D]">
+                    {new Date(new Date().getFullYear(), new Date().getMonth() + 1, 20).toLocaleDateString('pt-BR')}
+                  </p>
                 </div>
               </div>
             </div>
 
             <hr className="border-text-main/10" />
 
-            <button className="flex h-10 items-center justify-center gap-2 rounded-lg bg-transparent text-[#34A7B2] text-sm font-bold px-4 pb-2 hover:bg-[#34A7B2]/10 transition-colors">
-              <ClockIcon className="w-5 h-5" />
-              Acessar Histórico de Declarações
-            </button>
+            <Link href="/financas/historico-declaracoes">
+              <button className="flex h-10 items-center justify-center gap-2 rounded-lg bg-transparent text-[#34A7B2] text-sm font-bold px-4 pb-2 hover:bg-[#34A7B2]/10 transition-colors">
+                <ClockIcon className="w-5 h-5" />
+                Acessar Histórico de Declarações
+              </button>
+            </Link>
           </div>
         </section>
       </main>

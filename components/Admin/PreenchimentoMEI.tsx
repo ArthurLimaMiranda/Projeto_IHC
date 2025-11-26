@@ -1,6 +1,7 @@
+// app/financas/preenchimento-mei/page.tsx
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   ArrowLeftIcon,
   UserIcon,
@@ -10,207 +11,359 @@ import {
   HomeIcon,
   BuildingOfficeIcon,
   CakeIcon,
-  GlobeAltIcon,
+  DocumentTextIcon,
+  CalculatorIcon,
+  CheckCircleIcon,
   QuestionMarkCircleIcon,
-  CalendarIcon,
 } from "@heroicons/react/24/outline";
 import { useRouter } from "next/navigation";
-import MenuInferior from "./MenuInferior";
+import MenuInferior from "@/components/Admin/MenuInferior";
+import { useCart } from "@/contexts/CartContext";
 
-export default function CadastroConfeiteira() {
+export default function PreenchimentoMEI() {
   const router = useRouter();
+  const { 
+    generatePreFilledDeclaration, 
+    saveTaxDeclaration,
+    calculateTaxObligations,
+    getBusinessInfo 
+  } = useCart();
+  
+  const [formData, setFormData] = useState<any>(null);
+  const [taxCalculation, setTaxCalculation] = useState<any>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    const loadData = () => {
+      const preFilledData = generatePreFilledDeclaration();
+      setFormData(preFilledData);
+      
+      if (preFilledData.financial) {
+        const calculation = calculateTaxObligations(preFilledData.financial.annualRevenue);
+        setTaxCalculation(calculation);
+      }
+    };
+
+    loadData();
+  }, [generatePreFilledDeclaration, calculateTaxObligations]);
+
+  const handleInputChange = (section: string, field: string, value: string | number) => {
+    setFormData((prev: any) => ({
+      ...prev,
+      [section]: {
+        ...prev[section],
+        [field]: value
+      }
+    }));
+  };
+
+  const handleSubmit = async (status: 'draft' | 'submitted' = 'submitted') => {
+    if (!formData) return;
+
+    setIsSubmitting(true);
+    
+    try {
+      const declaration = {
+        year: new Date().getFullYear().toString(),
+        status: status,
+        data: formData
+      };
+
+      saveTaxDeclaration(declaration);
+      
+      if (status === 'submitted') {
+        alert("Declaração enviada com sucesso!");
+        router.push("/financas/historico-declaracoes");
+      } else {
+        alert("Rascunho salvo com sucesso!");
+        router.back();
+      }
+    } catch (error) {
+      alert("Erro ao salvar declaração. Tente novamente.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const formatCurrency = (value: number) => {
+    return new Intl.NumberFormat('pt-BR', {
+      style: 'currency',
+      currency: 'BRL'
+    }).format(value);
+  };
+
+  if (!formData) {
+    return (
+      <div className="min-h-screen bg-[#FFFFF4] flex items-center justify-center">
+        <div className="text-center">
+          <CalculatorIcon className="h-12 w-12 mx-auto text-gray-400 mb-4" />
+          <p className="text-gray-600">Carregando dados...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="relative flex min-h-screen w-full flex-col overflow-x-hidden bg-background-light text-content-light">
+    <div className="min-h-screen bg-[#FFFFF4] pb-24">
       {/* Header */}
-      <header className="flex items-center bg-[#EEEDDF] p-4 pb-2 justify-between sticky top-0 z-10">
-        <div className="flex size-12 shrink-0 items-center justify-start text-text-main">
-          <ArrowLeftIcon className="w-7 h-7 cursor-pointer text-[#4F2712]"
-          onClick={() => router.back()} />
-        </div>
-
-        <h1 className="text-text-main text-lg font-bold flex-1 text-center text-[#4F2712]">
-          Declaração de Renda
-        </h1>
-
-        <div className="flex w-12 items-center justify-end">
-          <button className="flex h-10 w-10 items-center justify-center rounded-full bg-transparent text-text-main">
-            <QuestionMarkCircleIcon className="w-7 h-7" />
-          </button>
-        </div>
+      <header className="flex items-center bg-[#EEEDDF] p-4 justify-between sticky top-0 z-10">
+        <ArrowLeftIcon 
+          className="w-7 h-7 cursor-pointer text-[#4F2712]" 
+          onClick={() => router.back()} 
+        />
+        <h1 className="text-lg font-bold text-[#4F2712]">Pré-preenchimento DASN-SIMEI</h1>
+        <QuestionMarkCircleIcon className="w-7 h-7 text-[#4F2712]" />
       </header>
 
-      <main className="flex-1 px-4 py-3 flex flex-col gap-8">
+      <main className="p-4 space-y-6">
+        {/* Resumo Financeiro */}
+        <section className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+          <h2 className="text-lg font-bold text-[#4F2712] mb-3 flex items-center gap-2">
+            <CalculatorIcon className="h-5 w-5" />
+            Resumo Financeiro para Declaração
+          </h2>
+          
+          <div className="grid grid-cols-2 gap-4 text-sm">
+            <div className="text-center p-3 bg-green-50 rounded-lg">
+              <p className="text-gray-600">Faturamento Anual</p>
+              <p className="font-bold text-green-700 text-lg">
+                {formatCurrency(formData.financial?.annualRevenue || 0)}
+              </p>
+            </div>
+            
+            <div className="text-center p-3 bg-blue-50 rounded-lg">
+              <p className="text-gray-600">Despesas Anuais</p>
+              <p className="font-bold text-blue-700 text-lg">
+                {formatCurrency(formData.financial?.totalExpenses || 0)}
+              </p>
+            </div>
+            
+            <div className="text-center p-3 bg-purple-50 rounded-lg">
+              <p className="text-gray-600">Lucro Líquido</p>
+              <p className="font-bold text-purple-700 text-lg">
+                {formatCurrency(formData.financial?.netProfit || 0)}
+              </p>
+            </div>
+            
+            <div className="text-center p-3 bg-orange-50 rounded-lg">
+              <p className="text-gray-600">DAS Mensal</p>
+              <p className="font-bold text-orange-700 text-lg">
+                {taxCalculation ? formatCurrency(taxCalculation.dasValue) : 'R$ 77,10'}
+              </p>
+            </div>
+          </div>
 
-        {/* Título */}
-        <h1 className="text-xl font-bold pt-4 pb-1 text-[#4F2712]">Informações do Negócio</h1>
+          {taxCalculation && (
+            <div className="mt-4 p-3 bg-yellow-50 rounded-lg border border-yellow-200">
+              <h3 className="font-semibold text-yellow-800 mb-2">Observações Importantes:</h3>
+              <ul className="text-sm text-yellow-700 space-y-1">
+                {taxCalculation.observations.map((obs: string, index: number) => (
+                  <li key={index}>• {obs}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </section>
 
         {/* Dados Pessoais */}
-        <div className="flex items-center gap-4 pb-2">
-          <h3 className="text-lg font-bold text-[#4F2712]">Dados Pessoais</h3>
-          <div className="flex-grow h-px bg-secondary/30"></div>
-        </div>
+        <section className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+          <h2 className="text-lg font-bold text-[#4F2712] mb-3">Dados Pessoais</h2>
+          
+          <div className="space-y-4">
+            <label className="flex flex-col">
+              <span className="text-sm font-medium text-gray-700 mb-1">Nome completo</span>
+              <input
+                type="text"
+                value={formData.personal.name}
+                onChange={(e) => handleInputChange('personal', 'name', e.target.value)}
+                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#B95760] focus:border-transparent"
+              />
+            </label>
 
-        <label className="flex flex-col">
-          <p className="text-secondary font-medium pb-2 text-[#0A0A0A]">Nome completo</p>
-          <input
-            type="text"
-            placeholder="Ex: Maria Silva"
-            className="form-input w-full rounded-lg bg-subtle-light h-14 p-4 focus:ring-2 focus:ring-[#B95760] focus:outline-none"
-          />
-        </label>
+            <div className="grid grid-cols-2 gap-4">
+              <label className="flex flex-col">
+                <span className="text-sm font-medium text-gray-700 mb-1">CPF</span>
+                <input
+                  type="text"
+                  value={formData.personal.cpf}
+                  onChange={(e) => handleInputChange('personal', 'cpf', e.target.value)}
+                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#B95760] focus:border-transparent"
+                />
+              </label>
 
-        <label className="flex flex-col">
-          <p className="text-secondary text-[#0A0A0A] font-medium pb-2">CPF</p>
-          <input
-            type="text"
-            placeholder="000.000.000-00"
-            inputMode="numeric"
-            className="form-input w-full rounded-lg bg-subtle-light h-14 p-4 focus:ring-2 focus:ring-[#B95760] focus:outline-none"
-          />
-        </label>
+              <label className="flex flex-col">
+                <span className="text-sm font-medium text-gray-700 mb-1">Telefone</span>
+                <input
+                  type="text"
+                  value={formData.personal.phone}
+                  onChange={(e) => handleInputChange('personal', 'phone', e.target.value)}
+                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#B95760] focus:border-transparent"
+                />
+              </label>
+            </div>
 
-        <label className="flex flex-col">
-          <p className="text-secondary text-[#0A0A0A] font-medium pb-2 ">Email</p>
-          <input
-            type="email"
-            placeholder="seuemail@exemplo.com"
-            className="w-full rounded-lg bg-subtle-light h-14 p-4 focus:ring-2 focus:ring-[#B95760] focus:outline-none"
-          />
-        </label>
-
-        <label className="flex flex-col">
-          <p className="text-secondary text-[#0A0A0A] font-medium pb-2">Telefone / WhatsApp</p>
-          <input
-            type="text"
-            placeholder="(00) 90000-0000"
-            className="w-full rounded-lg bg-subtle-light h-14 p-4 focus:ring-2 focus:ring-[#B95760] focus:outline-none"
-          />
-        </label>
+            <label className="flex flex-col">
+              <span className="text-sm font-medium text-gray-700 mb-1">Email</span>
+              <input
+                type="email"
+                value={formData.personal.email}
+                onChange={(e) => handleInputChange('personal', 'email', e.target.value)}
+                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#B95760] focus:border-transparent"
+              />
+            </label>
+          </div>
+        </section>
 
         {/* Endereço */}
-        <div className="flex items-center gap-4 pt-2 pb-2">
-          <h3 className="text-lg font-bold text-[#4F2712]">Endereço</h3>
-          <div className="flex-grow h-px bg-secondary/30"></div>
-        </div>
+        <section className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+          <h2 className="text-lg font-bold text-[#4F2712] mb-3">Endereço</h2>
+          
+          <div className="space-y-4">
+            <label className="flex flex-col">
+              <span className="text-sm font-medium text-gray-700 mb-1">Endereço completo</span>
+              <input
+                type="text"
+                value={formData.address.street}
+                onChange={(e) => handleInputChange('address', 'street', e.target.value)}
+                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#B95760] focus:border-transparent"
+              />
+            </label>
 
-        <label className="flex flex-col">
-          <p className="text-base font-medium pb-2 text-[#0A0A0A]">Endereço completo</p>
-          <input
-            type="text"
-            placeholder="Rua, número, complemento"
-            className="rounded-lg bg-subtle-light h-14 p-4 focus:ring-2 focus:ring-[#B95760] focus:outline-none"
-          />
-        </label>
+            <div className="grid grid-cols-2 gap-4">
+              <label className="flex flex-col">
+                <span className="text-sm font-medium text-gray-700 mb-1">Cidade</span>
+                <input
+                  type="text"
+                  value={formData.address.city}
+                  onChange={(e) => handleInputChange('address', 'city', e.target.value)}
+                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#B95760] focus:border-transparent"
+                />
+              </label>
 
-        <div className="grid grid-cols-2 gap-4">
-          <label className="flex flex-col">
-            <p className="text-base font-medium pb-2 text-[#0A0A0A]">Cidade</p>
-            <input
-              type="text"
-              placeholder="Ex: São Paulo"
-              className="rounded-lg bg-subtle-light h-14 p-4 focus:ring-2 focus:ring-[#B95760] focus:outline-none"
-            />
-          </label>
+              <label className="flex flex-col">
+                <span className="text-sm font-medium text-gray-700 mb-1">Estado</span>
+                <input
+                  type="text"
+                  value={formData.address.state}
+                  onChange={(e) => handleInputChange('address', 'state', e.target.value)}
+                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#B95760] focus:border-transparent"
+                />
+              </label>
+            </div>
+          </div>
+        </section>
 
-          <label className="flex flex-col">
-            <p className="text-base font-medium pb-2 text-[#0A0A0A]">Estado</p>
-            <input
-              type="text"
-              placeholder="SP"
-              className="rounded-lg bg-subtle-light h-14 p-4 focus:ring-2 focus:ring-[#B95760] focus:outline-none"
-            />
-          </label>
-        </div>
+        {/* Dados do Negócio */}
+        <section className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+          <h2 className="text-lg font-bold text-[#4F2712] mb-3">Dados do Negócio</h2>
+          
+          <div className="space-y-4">
+            <label className="flex flex-col">
+              <span className="text-sm font-medium text-gray-700 mb-1">Nome do negócio</span>
+              <input
+                type="text"
+                value={formData.business.name}
+                onChange={(e) => handleInputChange('business', 'name', e.target.value)}
+                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#B95760] focus:border-transparent"
+              />
+            </label>
 
-        {/* Negócio */}
-        <div className="flex items-center gap-4 pt-2 pb-2">
-          <h3 className="text-lg font-bold text-[#4F2712]">Negócio</h3>
-          <div className="flex-grow h-px bg-secondary/30"></div>
-        </div>
+            <label className="flex flex-col">
+              <span className="text-sm font-medium text-gray-700 mb-1">Tipo de produtos/serviços</span>
+              <input
+                type="text"
+                value={formData.business.productTypes}
+                onChange={(e) => handleInputChange('business', 'productTypes', e.target.value)}
+                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#B95760] focus:border-transparent"
+              />
+            </label>
 
-        <label className="flex flex-col">
-          <p className="text-base font-medium pb-2">Nome do negócio</p>
-          <input
-            type="text"
-            placeholder="Ex: Delícias da Maria"
-            className="w-full h-14 p-4 rounded-lg bg-subtle-light focus:ring-2 focus:ring-[#B95760] focus:outline-none"
-          />
-        </label>
+            <div className="grid grid-cols-2 gap-4">
+              <label className="flex flex-col">
+                <span className="text-sm font-medium text-gray-700 mb-1">CNPJ</span>
+                <input
+                  type="text"
+                  value={formData.business.cnpj}
+                  onChange={(e) => handleInputChange('business', 'cnpj', e.target.value)}
+                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#B95760] focus:border-transparent"
+                />
+              </label>
 
-        <label className="flex flex-col">
-          <p className="text-base font-medium pb-2">Tipo de produtos</p>
-          <input
-            type="text"
-            placeholder="Bolos, doces, cupcakes..."
-            className="w-full h-14 p-4 rounded-lg bg-subtle-light focus:ring-2 focus:ring-[#B95760] focus:outline-none"
-          />
-        </label>
+              <label className="flex flex-col">
+                <span className="text-sm font-medium text-gray-700 mb-1">CNAE</span>
+                <input
+                  type="text"
+                  value={formData.business.cnae}
+                  onChange={(e) => handleInputChange('business', 'cnae', e.target.value)}
+                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#B95760] focus:border-transparent"
+                />
+              </label>
+            </div>
+          </div>
+        </section>
 
-        <label className="flex flex-col">
-          <p className="text-base font-medium pb-2">CNPJ (se MEI)</p>
-          <input
-            type="text"
-            placeholder="00.000.000/0001-00"
-            className="w-full h-14 p-4 rounded-lg bg-subtle-light focus:ring-2 focus:ring-[#B95760] focus:outline-none"
-          />
-        </label>
+        {/* Informações Financeiras Detalhadas */}
+        <section className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+          <h2 className="text-lg font-bold text-[#4F2712] mb-3">Informações Financeiras</h2>
+          
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <label className="flex flex-col">
+                <span className="text-sm font-medium text-gray-700 mb-1">Faturamento mensal (média)</span>
+                <input
+                  type="text"
+                  value={formatCurrency(formData.financial.monthlyRevenue)}
+                  readOnly
+                  className="w-full p-3 border border-gray-300 rounded-lg bg-gray-50"
+                />
+              </label>
 
-        <label className="flex flex-col">
-          <p className="text-base font-medium pb-2">CNAE (opcional)</p>
-          <input
-            type="text"
-            placeholder="Ex: 5620-1/04"
-            className="w-full h-14 p-4 rounded-lg bg-subtle-light focus:ring-2 focus:ring-[#B95760] focus:outline-none"
-          />
-        </label>
+              <label className="flex flex-col">
+                <span className="text-sm font-medium text-gray-700 mb-1">Faturamento anual</span>
+                <input
+                  type="text"
+                  value={formatCurrency(formData.financial.annualRevenue)}
+                  readOnly
+                  className="w-full p-3 border border-gray-300 rounded-lg bg-gray-50"
+                />
+              </label>
+            </div>
 
-        {/* Renda / Declaração */}
-        <div className="flex items-center gap-4 pt-2 pb-2">
-          <h3 className="text-lg font-bold text-[#4F2712]">Informações para Declaração</h3>
-          <div className="flex-grow h-px bg-secondary/30"></div>
-        </div>
-
-        <label className="flex flex-col">
-          <p className="text-base font-medium pb-2">Faturamento mensal (média)</p>
-          <input
-            type="text"
-            placeholder="R$ 0,00"
-            inputMode="decimal"
-            className="w-full h-14 p-4 rounded-lg bg-subtle-light focus:ring-2 focus:ring-[#B95760] focus:outline-none"
-          />
-        </label>
-
-        <label className="flex flex-col">
-          <p className="text-base font-medium pb-2">Faturamento anual (últimos 12 meses)</p>
-          <input
-            type="text"
-            placeholder="R$ 0,00"
-            inputMode="decimal"
-            className="w-full h-14 p-4 rounded-lg bg-subtle-light focus:ring-2 focus:ring-[#B95760] focus:outline-none"
-          />
-        </label>
-
-        <label className="flex flex-col">
-          <p className="text-base font-medium pb-2">Descrição adicional (opcional)</p>
-          <input
-            type="text"
-            placeholder="Observações..."
-            className="w-full h-14 p-4 rounded-lg bg-subtle-light focus:ring-2 focus:ring-[#B95760] focus:outline-none"
-          />
-        </label>
+            <label className="flex flex-col">
+              <span className="text-sm font-medium text-gray-700 mb-1">Observações adicionais</span>
+              <textarea
+                value={formData.financial.additionalInfo}
+                onChange={(e) => handleInputChange('financial', 'additionalInfo', e.target.value)}
+                rows={3}
+                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#B95760] focus:border-transparent"
+                placeholder="Alguma observação importante sobre sua declaração..."
+              />
+            </label>
+          </div>
+        </section>
       </main>
 
-      {/* Footer */}
-      <div className="sticky bottom-0 bg-background-light p-4 pt-2">
-        <div className="flex gap-4">
-          <button className="flex w-full justify-center items-center rounded-xl bg-background-light h-14 text-primary border text-base font-bold">
-            Cancelar
+      {/* Footer Fixo */}
+      <div className="left-0 right-0 bg-white border-t border-gray-200 p-4">
+        <div className="flex flex-col gap-3">
+          <button
+            onClick={() => handleSubmit('draft')}
+            disabled={isSubmitting}
+            className="flex-1 py-3 px-4 border border-[#B95760] text-[#B95760] rounded-lg font-semibold disabled:opacity-50"
+          >
+            Salvar Rascunho
           </button>
-          <button className="flex w-full justify-center items-center rounded-xl bg-primary h-14 text-background-light text-base font-bold">
-            Salvar
+          <button
+            onClick={() => handleSubmit('submitted')}
+            disabled={isSubmitting}
+            className="flex-1 py-3 px-4 bg-[#B95760] text-white rounded-lg font-semibold disabled:opacity-50 flex items-center justify-center gap-2"
+          >
+            <CheckCircleIcon className="h-5 w-5" />
+            {isSubmitting ? 'Enviando...' : 'Enviar Declaração'}
           </button>
         </div>
       </div>
+
       <MenuInferior />
     </div>
   );
