@@ -264,6 +264,26 @@ export default function HistoricoPedidosPage() {
         </div>
       </header>
 
+      {/* AVISO DA AGENDA */}
+    <div className="px-4 pt-6">
+      <div className="w-full bg-[#FFF5D6] border border-[#E6C27A] text-[#4F2712] rounded-xl p-4 shadow-sm flex items-start gap-3">
+        <svg className="w-6 h-6 flex-shrink-0 mt-0.5 text-[#B95760]" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth="2"
+            d="M12 9v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+          />
+        </svg>
+
+        <p className="text-sm leading-relaxed">
+          Aqui você pode visualizar suas entregas próximas.<br />
+          Para acompanhar todos os pedidos com horários mais detalhados, acesse <Link href="/historico-pedidos/agenda" className="font-semibold">Agenda</Link>.
+        </p>
+      </div>
+    </div>
+
+
       {/* ENTREGAS PENDENTES */}
       <h2 className="text-lg font-bold px-4 pb-2 pt-6 text-[#4F2712]">
         Próximas Entregas

@@ -86,6 +86,11 @@ useEffect(() => {
     ]);
 
     fecharModal();
+    setSuccessMessage("Item adicionado com sucesso!");
+    setShowSuccessModal(true);
+
+// Fecha automaticamente após 1.5s
+setTimeout(() => setShowSuccessModal(false), 1500);
   };
 
   // -----------------------------------
@@ -164,6 +169,10 @@ const abrirModalExcluir = (id) => {
 const confirmarExclusao = () => {
   setItens((old) => old.filter((i) => i.id !== deleteId));
   setShowDeleteModal(false);
+  setSuccessMessage("Item removido com sucesso!");
+  setShowSuccessModal(true);
+
+  setTimeout(() => setShowSuccessModal(false), 1500);
 };
 
 
@@ -179,6 +188,11 @@ const confirmarExclusao = () => {
       return catOK && buscaOK;
     });
   }, [search, categoriaSelecionada, itens]);
+
+    // MODAL DE SUCESSO
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [successMessage, setSuccessMessage] = useState("");
+
 
   return (
     <div className="relative flex min-h-screen flex-col bg-background-light text-text-primary">
@@ -288,7 +302,10 @@ const confirmarExclusao = () => {
               <input
                 className="w-full p-2 border rounded-lg"
                 value={novaQtd}
-                onChange={(e) => setNovaQtd(e.target.value)}
+                onChange={(e) => {
+                  const onlyNumbers = e.target.value.replace(/[^0-9]/g, "");
+                  setNovaQtd(onlyNumbers);
+                }}
                 placeholder="Ex: 3"
               />
             </label>
@@ -436,6 +453,28 @@ const confirmarExclusao = () => {
           </div>
         </div>
       )}
+
+      {/* ----------------------- */}
+      {/*     MODAL SUCESSO       */}
+      {/* ----------------------- */}
+      {showSuccessModal && (
+        <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50">
+          <div className="bg-white w-10/12 max-w-sm p-6 rounded-xl shadow-xl text-center">
+
+            <h2 className="text-lg font-bold text-green-600">Sucesso!</h2>
+            <p className="mt-3 text-gray-700">{successMessage}</p>
+
+            <button
+              className="w-full mt-6 px-4 py-2 rounded-lg bg-green-500 text-white font-semibold"
+              onClick={() => setShowSuccessModal(false)}
+            >
+              OK
+            </button>
+
+          </div>
+        </div>
+      )}
+
 
 
     </div>

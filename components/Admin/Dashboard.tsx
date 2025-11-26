@@ -14,6 +14,7 @@ import {
   CubeIcon,
   CakeIcon,
 } from "@heroicons/react/24/solid";
+import { PencilSquareIcon } from "@heroicons/react/24/outline";
 
 // ------------------------------
 // COMPONENTE PRINCIPAL
@@ -179,6 +180,11 @@ export default function Dashboard() {
         </div>
       </div>
 
+      <div className="flex items-center justify-between px-4 pt-8">
+        <h2 className="text-xl font-bold text-[#4F2712]">Atalhos Rápidos</h2>
+        <PencilSquareIcon className="h-6 w-6 text-[#34A7B2] text-semibold"/>
+      </div>
+
       {/* ------------------------------------ */}
       {/* ACTION BUTTONS */}
       {/* ------------------------------------ */}
@@ -192,7 +198,7 @@ export default function Dashboard() {
         </Link>
 
         <Link
-          href="/financas/relatorio"
+          href="/financas/resumo"
           className="flex flex-col gap-y-2 items-center justify-center bg-[#B95760] rounded-xl p-4 text-white shadow-sm hover:scale-105 transition"
         >
           <DocumentChartBarIcon className="h-8 w-8 text-white" />

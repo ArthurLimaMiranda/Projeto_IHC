@@ -124,8 +124,8 @@ export default function RegistroDespesa() {
     };
 
     addExpense(novaDespesa);
-    alert("Despesa registrada com sucesso!");
-    router.back();
+    setShowConfirmModal(false);
+    setShowSuccessModal(true);
   };
 
   // Função para lidar com upload de foto
@@ -176,6 +176,9 @@ export default function RegistroDespesa() {
   const getTodayDate = () => {
     return new Date().toISOString().split('T')[0];
   };
+
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
 
   return (
     <div className="relative flex min-h-screen w-full flex-col overflow-x-hidden bg-[#FFFFF4]">
@@ -369,7 +372,7 @@ export default function RegistroDespesa() {
             Cancelar
           </button>
           <button 
-            onClick={handleSalvar}
+            onClick={() => setShowConfirmModal(true)}
             className="flex w-full justify-center rounded-xl items-center bg-[#B95760] h-14 text-white text-base font-bold hover:bg-[#A0464E] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             disabled={!valor || parseCurrency(valor) <= 0}
           >
@@ -382,6 +385,60 @@ export default function RegistroDespesa() {
           * Campos obrigatórios
         </p>
       </div>
+
+      {/* Modal de Confirmação */}
+      {showConfirmModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 px-6">
+          <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-xl">
+            <h2 className="text-lg font-bold text-[#4F2712] text-center mb-3">
+              Confirmar Registro
+            </h2>
+            <p class="text-gray-700 text-center mb-6">
+              Deseja registrar esta despesa?
+            </p>
+
+            <div className="flex gap-3">
+              <button
+                className="w-full h-12 rounded-xl border border-[#B95760] text-[#B95760] font-semibold"
+                onClick={() => setShowConfirmModal(false)}
+              >
+                Cancelar
+              </button>
+              <button
+                className="w-full h-12 rounded-xl bg-[#B95760] text-white font-semibold"
+                onClick={handleSalvar}
+              >
+                Sim, registrar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Sucesso */}
+      {showSuccessModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 px-6">
+          <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-xl text-center">
+            <h2 className="text-lg font-bold text-green-700 mb-3">
+              Sucesso!
+            </h2>
+            <p className="text-gray-700 mb-6">
+              A despesa foi registrada com sucesso.
+            </p>
+
+            <button
+              className="w-full h-12 rounded-xl bg-green-600 text-white font-semibold"
+              onClick={() => {
+                setShowSuccessModal(false);
+                router.back();
+              }}
+            >
+              OK
+            </button>
+          </div>
+        </div>
+      )}
+
 
       <MenuInferior />
     </div>
