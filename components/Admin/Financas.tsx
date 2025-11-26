@@ -121,13 +121,6 @@ export default function FinancasPage() {
                 <span className="truncate">Gerar Relatório</span>
               </button>
             </Link>
-
-            <Link href="/financas/declaracao-renda" className="flex-1">
-              <button className="flex w-full text-[#4F2712] h-12 items-center justify-center gap-2 rounded-lg bg-[#34A7B2]/20 px-4 font-bold text-text-main text-sm hover:bg-[#34A7B2]/30 transition-colors">
-                <DocumentTextIcon className="w-6 h-6" />
-                <span className="truncate">Declaração de Renda</span>
-              </button>
-            </Link>
           </div>
         </section>
 
