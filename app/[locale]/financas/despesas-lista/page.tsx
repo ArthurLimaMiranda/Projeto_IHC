@@ -1,4 +1,3 @@
-// app/financas/despesas-lista/page.tsx
 "use client";
 
 import React, { useState, useEffect } from "react";
@@ -14,30 +13,58 @@ export default function ListaDespesas() {
   const [despesas, setDespesas] = useState<any[]>([]);
   const [categoriaFiltro, setCategoriaFiltro] = useState("Todas");
 
+  // 👇 MOVIDO PARA CIMA (ANTES DO useEffect)
+  const [searchTerm, setSearchTerm] = useState("");
+
   useEffect(() => {
     const carregarDespesas = () => {
       let expenses = getExpenses();
-      
+
+      // Filtro por categoria
       if (categoriaFiltro !== "Todas") {
         expenses = getExpensesByCategory(categoriaFiltro);
       }
-      
-      // Ordenar por data (mais recente primeiro)
-      expenses.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+      // Filtro de texto
+      if (searchTerm.trim() !== "") {
+        const term = searchTerm.toLowerCase();
+
+        expenses = expenses.filter((item) =>
+          item.category?.toLowerCase().includes(term) ||
+          item.subcategory?.toLowerCase().includes(term) ||
+          item.description?.toLowerCase().includes(term) ||
+          item.supplier?.toLowerCase().includes(term)
+        );
+      }
+
+      // Ordenar por data
+      expenses.sort(
+        (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+      );
+
       setDespesas(expenses);
     };
 
     carregarDespesas();
-    window.addEventListener('storage', carregarDespesas);
-    return () => window.removeEventListener('storage', carregarDespesas);
-  }, [getExpenses, getExpensesByCategory, categoriaFiltro]);
+    window.addEventListener("storage", carregarDespesas);
+    return () => window.removeEventListener("storage", carregarDespesas);
+  }, [getExpenses, getExpensesByCategory, categoriaFiltro, searchTerm]);
 
-  const categorias = ["Todas", "Ingredientes", "Embalagens", "Marketing", "Contas", "Aluguel", "Salários", "Outros"];
+  const categorias = [
+    "Todas",
+    "Ingredientes",
+    "Embalagens",
+    "Marketing",
+    "Contas",
+    "Aluguel",
+    "Salários",
+    "Outros"
+  ];
 
   const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency: 'BRL'
+    return new Intl.NumberFormat("pt-BR", {
+      style: "currency",
+      currency: "BRL",
     }).format(value);
   };
 
@@ -48,13 +75,26 @@ export default function ListaDespesas() {
   return (
     <div className="min-h-screen bg-[#FFFFF4] pb-24">
       <header className="flex items-center bg-[#EEEDDF] p-4 justify-between sticky top-0 z-10">
-        <ArrowLeftIcon 
-          className="w-7 h-7 cursor-pointer text-[#4F2712]" 
-          onClick={() => router.back()} 
+        <ArrowLeftIcon
+          className="w-7 h-7 cursor-pointer text-[#4F2712]"
+          onClick={() => router.back()}
         />
         <h1 className="text-lg font-bold text-[#4F2712]">Todas as Despesas</h1>
         <QuestionMarkCircleIcon className="w-7 h-7 text-[#4F2712]" />
       </header>
+
+      {/* Campo de Busca */}
+      <div className="px-4 mt-4">
+        <input
+          type="text"
+          placeholder="Buscar despesas..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="w-full p-3 bg-white border border-[#4F2712] rounded-xl text-[#4F2712]
+            focus:border-[#B95760] focus:ring-2 focus:ring-[#B95760] 
+            focus:outline-none"
+        />
+      </div>
 
       {/* Filtros */}
       <div className="p-4">
@@ -85,7 +125,7 @@ export default function ListaDespesas() {
             </span>
           </div>
           <p className="text-sm text-gray-500 mt-1">
-            {despesas.length} {despesas.length === 1 ? 'despesa' : 'despesas'} encontradas
+            {despesas.length} {despesas.length === 1 ? "despesa" : "despesas"} encontradas
           </p>
         </div>
       </div>
@@ -102,8 +142,11 @@ export default function ListaDespesas() {
           </div>
         ) : (
           <div className="space-y-3">
-            {despesas.map(despesa => (
-              <div key={despesa.id} className="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
+            {despesas.map((despesa) => (
+              <div
+                key={despesa.id}
+                className="bg-white p-4 rounded-xl shadow-sm border border-gray-100"
+              >
                 <div className="flex justify-between items-start">
                   <div className="flex-1">
                     <h3 className="font-bold text-[#B95760]">{despesa.category}</h3>
@@ -114,7 +157,9 @@ export default function ListaDespesas() {
                       <p className="text-sm text-gray-600 mt-1">{despesa.description}</p>
                     )}
                     <div className="flex items-center gap-4 mt-2 text-xs text-gray-500">
-                      <span>{new Date(despesa.date).toLocaleDateString('pt-BR')}</span>
+                      <span>
+                        {new Date(despesa.date).toLocaleDateString("pt-BR")}
+                      </span>
                       {despesa.supplier && (
                         <>
                           <span>•</span>
