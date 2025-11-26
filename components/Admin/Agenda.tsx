@@ -1,8 +1,6 @@
 "use client";
 import { useState } from "react";
 import {
-  Bars3Icon,
-  BellIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
   PlusIcon,
@@ -13,10 +11,23 @@ import {
 } from "@heroicons/react/24/solid";
 import MenuInferior from "@/components/Admin/MenuInferior";
 import { useRouter } from "next/navigation";
+import { QuestionMarkCircleIcon } from "@heroicons/react/24/outline";
 
 
-// Helpers --------------------------------------------------------------
-const weekDays = ["D", "S", "T", "Q", "Q", "S", "S"]; // Domingo → Sábado
+// ----------------------------------------------------------------------
+// CONSTANTES
+// ----------------------------------------------------------------------
+
+const weekDays = ["D", "S", "T", "Q", "Q", "S", "S"];
+
+const monthNames = [
+  "Janeiro","Fevereiro","Março","Abril","Maio","Junho",
+  "Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"
+];
+
+// ----------------------------------------------------------------------
+// HELPERS
+// ----------------------------------------------------------------------
 
 function getMonthMatrix(year, month) {
   const firstDay = new Date(year, month, 1).getDay();
@@ -41,99 +52,259 @@ function getMonthMatrix(year, month) {
   return matrix;
 }
 
-// Main Component --------------------------------------------------------
-export default function AgendaPage() {
-  const router = useRouter(); 
+function getWeekDates(selectedDay) {
+  const week = [];
+  const day = new Date(selectedDay);
+  const weekday = day.getDay();
 
-  const [selectedView, setSelectedView] = useState("Semana");
-  const [currentDate, setCurrentDate] = useState(new Date(2025, 0, 1)); // 2025
-  const [selectedDay, setSelectedDay] = useState(new Date(2025, 0, 1));
+  day.setDate(day.getDate() - weekday);
+
+  for (let i = 0; i < 7; i++) {
+    week.push(new Date(day));
+    day.setDate(day.getDate() + 1);
+  }
+  return week;
+}
+
+// ----------------------------------------------------------------------
+// COMPONENTE PRINCIPAL
+// ----------------------------------------------------------------------
+
+export default function AgendaPage() {
+  const router = useRouter();
+
+  // ➤ Agora inicia sempre em "Mês"
+  const [selectedView, setSelectedView] = useState("Mês");
+
+  // ➤ Pega o mês atual automaticamente
+  const today = new Date();
+  const [currentDate, setCurrentDate] = useState(new Date(today.getFullYear(), today.getMonth(), 1));
+
+  // ➤ Dia selecionado começa no dia atual
+  const [selectedDay, setSelectedDay] = useState(today);
 
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
 
-  const monthNames = [
-    "Janeiro",
-    "Fevereiro",
-    "Março",
-    "Abril",
-    "Maio",
-    "Junho",
-    "Julho",
-    "Agosto",
-    "Setembro",
-    "Outubro",
-    "Novembro",
-    "Dezembro",
-  ];
-
   const matrix = getMonthMatrix(year, month);
+  const weekDates = getWeekDates(selectedDay);
 
-  function handlePrevMonth() {
-    setCurrentDate(new Date(year, month - 1, 1));
-  }
+  // ----------------------------------------------------------------------
+  // EVENTOS DE EXEMPLO
+  // ----------------------------------------------------------------------
 
-  function handleNextMonth() {
-    setCurrentDate(new Date(year, month + 1, 1));
-  }
-
-  // Example events ------------------------------------------------------
   const events = [
-    {
-      date: "2025-01-05",
-      title: "Bolo Casamento - Ana",
-      status: "pending",
-      time: "14:00 - 15:00",
-    },
-    {
-      date: "2025-01-05",
-      title: "Kit Festa Infantil",
-      status: "completed",
-      time: "09:00 - 10:00",
-    },
-    {
-      date: "2025-01-05",
-      title: "Folga",
-      status: "block",
-      time: "Dia inteiro",
-    },
+    { date: "2025-01-05", title: "Bolo Casamento", status: "pending", time: "14:00" },
+    { date: "2025-01-05", title: "Kit Festa Infantil", status: "completed", time: "09:00" },
+    { date: "2025-01-10", title: "Folga", status: "block", time: "Dia inteiro" },
+    { date: "2025-01-18", title: "Encomenda Brownie", status: "pending", time: "11:00" }
   ];
 
   const todayEvents = events.filter(
     (e) => e.date === selectedDay.toISOString().split("T")[0]
   );
 
-  return (
-    <div className="min-h-screen w-full bg-[#FFFFF4]">
-      {/* Top App Bar */}
-        <div className="sticky top-0 z-10 flex items-center bg-[#EEEDDF] p-4 pb-2 justify-between">
-            <div className="flex size-12 items-center">
-                <button
-                onClick={() => router.back()}
-                className="text-[#4F2712] h-12"
+  // ----------------------------------------------------------------------
+  // NAVEGAÇÃO
+  // ----------------------------------------------------------------------
+
+  function handlePrev() {
+    if (selectedView === "Semana") {
+      setSelectedDay(new Date(selectedDay.setDate(selectedDay.getDate() - 7)));
+    } else if (selectedView === "Mês") {
+      setCurrentDate(new Date(year, month - 1, 1));
+    } else {
+      setCurrentDate(new Date(year - 1, 0, 1));
+    }
+  }
+
+  function handleNext() {
+    if (selectedView === "Semana") {
+      setSelectedDay(new Date(selectedDay.setDate(selectedDay.getDate() + 7)));
+    } else if (selectedView === "Mês") {
+      setCurrentDate(new Date(year, month + 1, 1));
+    } else {
+      setCurrentDate(new Date(year + 1, 0, 1));
+    }
+  }
+
+  // ----------------------------------------------------------------------
+  // VISUALIZAÇÕES
+  // ----------------------------------------------------------------------
+
+  function renderWeekView() {
+    return (
+      <>
+        <div className="grid grid-cols-7 text-center text-[#B95760] text-sm font-bold mb-1">
+          {weekDays.map((d) => <span key={d}>{d}</span>)}
+        </div>
+
+        <div className="grid grid-cols-7">
+          {weekDates.map((date, i) => {
+            const iso = date.toISOString().split("T")[0];
+            const hasEvent = events.some((e) => e.date === iso);
+            const isSelected =
+              selectedDay.toDateString() === date.toDateString();
+
+            return (
+              <button
+                key={i}
+                onClick={() => setSelectedDay(new Date(date))}
+                className="relative flex items-center justify-center h-14"
+              >
+                <div
+                  className={`h-10 w-10 rounded-full flex items-center justify-center text-sm ${
+                    isSelected ? "bg-[#4F2712] text-white" : "text-[#4F2712]"
+                  }`}
                 >
-                <ArrowLeftIcon className="w-8 h-8 text-[#4F2712]" />
-                </button>
-        </div>
-        <h2 className="text-[#4F2712] text-lg font-bold flex-1 text-center">
-        Minha Agenda
-        </h2>
+                  {date.getDate()}
+                </div>
 
-        <div className="flex w-12 items-center justify-end">
-          <button className="h-12 text-primary text-[#4F2712]">
-            <BellIcon className="w-8 h-8 text-[#4F2712]" />
-          </button>
+                {hasEvent && (
+                  <span className="absolute bottom-1 w-1.5 h-1.5 bg-event-pending rounded-full"></span>
+                )}
+              </button>
+            );
+          })}
         </div>
+      </>
+    );
+  }
+
+  function renderMonthView() {
+    return (
+      <>
+        <div className="grid grid-cols-7 text-center text-[#B95760] text-sm font-bold mb-1">
+          {weekDays.map((d) => <span key={d}>{d}</span>)}
+        </div>
+
+        <div className="grid grid-cols-7">
+          {matrix.map((d, i) => {
+            const dateObj = new Date(
+              year,
+              month + (d.dim ? (i < 7 ? -1 : 1) : 0),
+              d.num
+            );
+            const iso = dateObj.toISOString().split("T")[0];
+            const hasEvent = events.some((e) => e.date === iso);
+
+            const isSelected =
+              selectedDay.toDateString() === dateObj.toDateString();
+
+            return (
+              <button
+                key={i}
+                onClick={() => setSelectedDay(dateObj)}
+                className="relative h-12 flex items-center justify-center text-sm"
+              >
+                <div
+                  className={`h-8 w-8 rounded-full flex items-center justify-center ${
+                    isSelected
+                      ? "bg-[#4F2712] text-white"
+                      : d.dim
+                      ? "text-[#00000040]"
+                      : "text-[#4F2712]"
+                  }`}
+                >
+                  {d.num}
+                </div>
+
+                {hasEvent && (
+                  <span className="absolute bottom-1 w-1.5 h-1.5 bg-event-pending rounded-full"></span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      </>
+    );
+  }
+
+  function renderYearView() {
+    return (
+      <div className="grid grid-cols-1 gap-6 px-4 pb-2">
+        {Array.from({ length: 12 }).map((_, monthIndex) => {
+          const monthMatrix = getMonthMatrix(year, monthIndex);
+
+          return (
+            <div key={monthIndex} className="bg-[#EEE3CC] rounded-xl p-3 shadow-sm">
+              <h2 className="text-[#4F2712] text-lg font-bold text-center mb-2">
+                {monthNames[monthIndex]}
+              </h2>
+
+              <div className="grid grid-cols-7 text-[11px] text-[#B95760] font-bold mb-1">
+                {weekDays.map((d) => (
+                  <span key={d} className="text-center">{d}</span>
+                ))}
+              </div>
+
+              <div className="grid grid-cols-7 gap-1 text-[11px]">
+                {monthMatrix.map((d, i) => {
+                  const dateObj = new Date(
+                    year,
+                    monthIndex + (d.dim ? (i < 7 ? -1 : 1) : 0),
+                    d.num
+                  );
+                  const iso = dateObj.toISOString().split("T")[0];
+                  const hasEvent = events.some((e) => e.date === iso);
+
+                  const isSelected =
+                    selectedDay.toDateString() === dateObj.toDateString();
+
+                  return (
+                    <button
+                      key={i}
+                      onClick={() => {
+                        setSelectedDay(dateObj);
+                        setCurrentDate(new Date(year, monthIndex, 1));
+                        setSelectedView("Mês");
+                      }}
+                      className={`relative flex items-center justify-center h-7 rounded-full ${
+                        isSelected
+                          ? "bg-[#4F2712] text-white"
+                          : d.dim
+                          ? "text-[#4F271250]"
+                          : "text-[#4F2712]"
+                      }`}
+                    >
+                      {d.num}
+
+                      {hasEvent && (
+                        <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-1 h-1 bg-event-pending rounded-full"></span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })}
       </div>
+    );
+  }
 
-      {/* View Selector */}
+  // ----------------------------------------------------------------------
+  // RENDER
+  // ----------------------------------------------------------------------
+
+  return (
+    <div className="min-h-screen bg-[#FFFFF4] pb-24">
+
+      {/* HEADER */}
+      <header className="flex items-center bg-[#EEEDDF] p-4 justify-between sticky top-0 z-10">
+        <ArrowLeftIcon className="w-7 h-7 text-[#4F2712] cursor-pointer" onClick={() => router.back()} />
+        <h1 className="text-lg font-bold text-[#4F2712]">Minha Agenda</h1>
+        <QuestionMarkCircleIcon className="w-7 h-7 text-[#4F2712]" />
+      </header>
+
+      {/* VIEW SELECTOR */}
       <div className="flex px-4 py-3 pt-6 pb-4">
         <div className="flex h-10 flex-1 items-center justify-center rounded-md bg-[#edebdd] p-1">
-          {["Dia", "Semana", "Mês"].map((view) => (
+          {["Semana", "Mês", "Ano"].map((view) => (
             <label
               key={view}
               className={`flex cursor-pointer h-full grow items-center justify-center rounded-md px-2 text-sm font-medium ${
-                selectedView === view ? "bg-[#4F2712] text-white shadow-md" : "text-[#4F2712]"
+                selectedView === view ? "bg-[#4F2712] text-white" : "text-[#4F2712]"
               }`}
             >
               <span>{view}</span>
@@ -148,97 +319,41 @@ export default function AgendaPage() {
         </div>
       </div>
 
-      {/* Calendar Picker */}
-      <div className="flex flex-wrap items-center justify-center gap-6 px-4">
-        <div className="flex min-w-full max-w-full flex-col gap-0.5">
-          <div className="flex items-center p-1 justify-between text-[#4F2712]">
-            <button className="text-primary text-[#4F2712]" onClick={handlePrevMonth}>
-              <ChevronLeftIcon className="w-8 h-8 text-[#4F2712]" />
-            </button>
-
-            <p className="text-[#4F2712] text-base font-bold text-center flex-1">
-            {monthNames[month]} {year}
-            </p>
-
-            <button className="text-primary" onClick={handleNextMonth}>
-              <ChevronRightIcon className="w-8 h-8 text-[#4F2712]" />
-            </button>
-          </div>
-
-          {/* Week Days */}
-          <div className="grid grid-cols-7 text-primary text-[#B95760]">
-            {weekDays.map((d) => (
-              <p
-                key={d}
-                className="text-[13px] font-bold flex h-12 w-full items-center justify-center text-[#B95760]"
-              >
-                {d}
-              </p>
-            ))}
-
-            {/* Dates */}
-            {matrix.map((d, i) => {
-              const dateObj = new Date(year, month + (d.dim ? (i < 7 ? -1 : 1) : 0), d.num);
-              const iso = dateObj.toISOString().split("T")[0];
-              const hasEvent = events.some((e) => e.date === iso);
-              const isSelected =
-                selectedDay.toISOString().split("T")[0] === iso;
-
-              return (
-                <button
-                  key={i}
-                  className={`relative h-12 w-full text-sm font-medium ${
-                    d.dim ? "text-primary/50" : "text-primary"
-                  }`}
-                  onClick={() => setSelectedDay(dateObj)}
-                >
-                  <div
-                    className={`flex size-full items-center justify-center rounded-full ${
-                      isSelected ? "bg-[#4F2712] text-white" : "text-[#4F2712]"
-                    }`}
-                  >
-                    {d.num}
-                  </div>
-                  {hasEvent && (
-                    <div className="absolute bottom-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-event-pending"></div>
-                  )}
-                </button>
-              );
-            })}
-          </div>
-        </div>
+      {/* NAVIGATION */}
+      <div className="flex items-center justify-between px-6 text-[#4F2712] font-bold text-lg">
+        <ChevronLeftIcon className="w-7 h-7 cursor-pointer" onClick={handlePrev} />
+        <p>
+          {selectedView === "Semana" &&
+            `Semana de ${selectedDay.getDate()} ${monthNames[selectedDay.getMonth()]}`}
+          {selectedView === "Mês" &&
+            `${monthNames[month]} ${year}`}
+          {selectedView === "Ano" &&
+            `${year}`}
+        </p>
+        <ChevronRightIcon className="w-7 h-7 cursor-pointer" onClick={handleNext} />
       </div>
 
-      {/* Legend and Events */}
-      <div className="flex flex-col gap-4 p-4 mt-2">
-        <div className="flex items-center justify-center gap-4 text-xs text-primary/80">
-          <div className="flex items-center gap-2">
-            <div className="size-3 rounded-full bg-event-pending"></div>
-            <span className="text-[#B95760] text-lg">Pendente</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="size-3 rounded-full bg-event-completed"></div>
-            <span className="text-[#B95760] text-lg">Entregue</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="size-3 rounded-full bg-event-block"></div>
-            <span className="text-[#B95760] text-lg">Bloqueio</span>
-          </div>
-        </div>
+      {/* VIEWS */}
+      <div className="p-4">
+        {selectedView === "Semana" && renderWeekView()}
+        {selectedView === "Mês" && renderMonthView()}
+        {selectedView === "Ano" && renderYearView()}
+      </div>
 
-        <hr className="border-primary/10" />
-
-        <h3 className="text-base font-bold text-[#4F2712]">
+      {/* EVENTOS DO DIA */}
+      <div className="px-5 mt-3">
+        <h3 className="text-base font-bold text-[#4F2712] mb-3">
           Eventos do dia {selectedDay.getDate()}
         </h3>
 
-        <div className="flex flex-col gap-3">
-          {todayEvents.length === 0 && (
-            <p className="text-[#4F2712] text-sm">Nenhum evento.</p>
-          )}
+        {todayEvents.length === 0 && (
+          <p className="text-sm text-[#4F2712]">Nenhum evento.</p>
+        )}
 
-          {todayEvents.map((event, idx) => (
-            <div className="flex items-center gap-4 min-h-14" key={idx}>
+        <div className="flex flex-col gap-3">
+          {todayEvents.map((event, i) => (
+            <div key={i} className="flex items-center gap-4 bg-[#EEE] p-3 rounded-xl">
+
               <div
                 className={`flex items-center justify-center size-10 rounded-lg ${
                   event.status === "pending"
@@ -248,32 +363,29 @@ export default function AgendaPage() {
                     : "bg-event-block/20 text-event-block"
                 }`}
               >
-                {event.status === "pending" && (
-                  <ClockIcon className="w-6 h-6" />
-                )}
-                {event.status === "completed" && (
-                  <CheckCircleIcon className="w-6 h-6" />
-                )}
-                {event.status === "block" && (
-                  <StopIcon className="w-6 h-6" />
-                )}
+                {event.status === "pending" && <ClockIcon className="w-6 h-6" />}
+                {event.status === "completed" && <CheckCircleIcon className="w-6 h-6" />}
+                {event.status === "block" && <StopIcon className="w-6 h-6" />}
               </div>
+
               <div className="flex-1">
-                <p className="text-primary text-base font-medium">{event.title}</p>
-                <p className="text-sm text-primary/70">{event.time}</p>
+                <p className="text-[#4F2712] text-base font-medium">{event.title}</p>
+                <p className="text-sm text-[#4F2712]/70">{event.time}</p>
               </div>
+
             </div>
           ))}
         </div>
       </div>
 
       {/* FAB */}
-      <div className="fixed bottom-6 right-6 pb-14">
+      <div className="fixed bottom-6 right-6 pb-16">
         <button className="flex items-center justify-center size-14 bg-primary text-white rounded-2xl shadow-lg">
           <PlusIcon className="w-10 h-10" />
         </button>
       </div>
-      < MenuInferior/>
+
+      <MenuInferior />
     </div>
   );
 }

@@ -5,8 +5,10 @@ import {
   MagnifyingGlassIcon,
   ChevronRightIcon,
   PlusIcon,
+  QuestionMarkCircleIcon,
 } from "@heroicons/react/24/outline";
 import { useRouter } from "next/navigation";
+import MenuInferior from "./MenuInferior";
 
 export default function GerenciarEstoque() {
   const router = useRouter();
@@ -43,18 +45,20 @@ export default function GerenciarEstoque() {
 
       {/* Top Bar */}
       <header className="flex items-center bg-[#EEEDDF] p-4 pb-2 justify-between sticky top-0 z-10">
-        <div className="flex size-12 items-center text-text-main">
-          <ArrowLeftIcon
-            className="w-7 h-7 cursor-pointer text-[#4F2712]"
-            onClick={() => router.back()}
-          />
+        <div className="flex size-12 shrink-0 items-center justify-start text-text-main">
+          <ArrowLeftIcon className="w-7 h-7 cursor-pointer text-[#4F2712]"
+          onClick={() => router.back()} />
         </div>
 
-        <h1 className="text-lg font-bold flex-1 text-center text-[#4F2712]">
+        <h1 className="text-text-main text-lg font-bold flex-1 text-center text-[#4F2712]">
           Gerenciar Estoque
         </h1>
 
-        <div className="flex w-12 items-center justify-end" />
+        <div className="flex w-12 items-center justify-end">
+          <button className="flex h-10 w-10 items-center justify-center rounded-full bg-transparent text-text-main">
+            <QuestionMarkCircleIcon className="w-7 h-7" />
+          </button>
+        </div>
       </header>
 
       {/* Conteúdo */}
@@ -128,6 +132,7 @@ function Item({ nome, quantidade, status }) {
       <div className="shrink-0 text-text-secondary flex size-7 items-center justify-center">
         <ChevronRightIcon className="w-5 h-5" />
       </div>
+       <MenuInferior />
     </div>
   );
 }

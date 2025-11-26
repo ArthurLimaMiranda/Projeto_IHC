@@ -22,7 +22,7 @@ export default function MenuInferior() {
     { href: "/dashboard", match: "/dashboard", label: "Início", icon: HomeIcon },
     { href: "/historico-pedidos", match: "/historico-pedidos", label: "Pedidos", icon: ClipboardIcon },
     { href: "/financas", match: "/financas", label: "Finanças", icon: ChartBarIcon },
-    { href: "/produtos", match: "/produtos", label: "Produtos", icon: CubeIcon },
+    { href: "/estoque", match: "/estoque", label: "Produtos", icon: CubeIcon },
   ];
 
   return (
