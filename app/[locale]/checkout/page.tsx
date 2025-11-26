@@ -68,11 +68,29 @@ export default function CheckoutPage() {
   };
 
   const hasCustomizations = (item: any) => {
+    const customization = item.customization || {};
     return (
-      (item.customization?.toppings && item.customization.toppings.length > 0) ||
-      (item.customization?.addOns && item.customization.addOns.length > 0) ||
-      (item.customization?.extras && item.customization.extras.length > 0)
+      (customization.toppings && customization.toppings.length > 0) ||
+      (customization.addOns && customization.addOns.length > 0) ||
+      (customization.extras && customization.extras.length > 0)
     );
+  };
+
+  // Função para garantir que extras sejam tratados como array de strings
+  const getExtrasDisplay = (extras: any): string[] => {
+    if (!extras) return [];
+    
+    // Se já for array de strings, retorna como está
+    if (Array.isArray(extras) && extras.length > 0 && typeof extras[0] === 'string') {
+      return extras;
+    }
+    
+    // Se for array de objetos, extrai os nomes
+    if (Array.isArray(extras) && extras.length > 0 && typeof extras[0] === 'object') {
+      return extras.map((extra: any) => extra.name || extra);
+    }
+    
+    return [];
   };
 
   const formatPhoneForStorage = (phone: string) => {
@@ -104,17 +122,25 @@ export default function CheckoutPage() {
       // Formatar telefone para armazenamento consistente
       const formattedPhone = formatPhoneForStorage(formData.phone);
 
+      // Processar itens para garantir que os dados estejam consistentes
+      const processedItems = cartItems.map(item => ({
+        ...item,
+        id: item.id || Date.now() + Math.random(), // Garantir ID único
+        customization: {
+          ...item.customization,
+          // Garantir que extras sejam sempre array de strings
+          extras: getExtrasDisplay(item.customization?.extras)
+        }
+      }));
+
       // Criar objeto do pedido
       const order = {
         id: 'JUJU' + Date.now().toString().slice(-8),
         customer: {
           ...formData,
-          phone: formattedPhone, // Salvar telefone formatado
+          phone: formattedPhone,
         },
-        items: cartItems.map(item => ({
-          ...item,
-          id: item.id || Date.now() + Math.random(), // Garantir ID único
-        })),
+        items: processedItems,
         subtotal,
         deliveryFee,
         discount: pixDiscount,
@@ -129,7 +155,7 @@ export default function CheckoutPage() {
       // Salvar pedido no localStorage
       const existingOrders = JSON.parse(localStorage.getItem('juju-orders') || '[]');
       
-      // Verificar se já existe um pedido com o mesmo ID (muito improvável, mas seguro)
+      // Verificar se já existe um pedido com o mesmo ID
       const orderExists = existingOrders.some((existingOrder: any) => existingOrder.id === order.id);
       if (!orderExists) {
         existingOrders.push(order);
@@ -156,12 +182,12 @@ export default function CheckoutPage() {
       <Header />
 
       <main className="container mx-auto max-w-md p-4 space-y-6 pb-32">
-        <h2 className="text-2xl font-bold text-center text-gray-800">Finalize seu Pedido</h2>
+        <h2 className="text-3xl font-bold text-center text-[#4F2712]">Finalize seu Pedido</h2>
         
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Informações de Entrega */}
           <section>
-            <h3 className="text-lg font-bold mb-3 text-gray-700">Informações de Entrega</h3>
+            <h3 className="text-lg font-bold mb-3 text-[#4F2712]">Informações de Entrega</h3>
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-600 mb-1" htmlFor="name">
@@ -235,11 +261,12 @@ export default function CheckoutPage() {
 
           {/* Resumo do Pedido */}
           <section>
-            <h3 className="text-lg font-bold mb-3 text-gray-700">Resumo do Pedido</h3>
+            <h3 className="text-lg font-bold mb-3 text-[#4F2712]">Resumo do Pedido</h3>
             <div className="bg-white p-4 rounded-lg shadow space-y-4">
               {cartItems.map((item) => {
                 const isExpanded = expandedItems.includes(item.id);
                 const hasMoreDetails = hasCustomizations(item);
+                const customization = item.customization || {};
                 
                 return (
                   <div key={item.id} className="pb-3 border-b border-gray-100 last:border-b-0 last:pb-0">
@@ -271,16 +298,16 @@ export default function CheckoutPage() {
                         </div>
                         
                         {/* Informações básicas sempre visíveis */}
-                        {item.customization && (
+                        {customization && (
                           <div className="text-xs text-gray-600 space-y-1">
                             <div className="flex items-start gap-1">
                               <span className="font-medium">Sabor:</span>
-                              <span>{item.customization.flavor}</span>
+                              <span>{customization.flavor}</span>
                             </div>
-                            {item.customization.frosting && item.customization.frosting !== 'Nenhuma' && (
+                            {customization.frosting && customization.frosting !== 'Nenhuma' && (
                               <div className="flex items-start gap-1">
                                 <span className="font-medium">Cobertura:</span>
-                                <span>{item.customization.frosting}</span>
+                                <span>{customization.frosting}</span>
                               </div>
                             )}
                           </div>
@@ -310,29 +337,29 @@ export default function CheckoutPage() {
                     </div>
                     
                     {/* Detalhes expandidos */}
-                    {isExpanded && item.customization && (
+                    {isExpanded && customization && (
                       <div className="mt-3 pl-19 space-y-2">
                         {/* Toppings */}
-                        {item.customization.toppings && item.customization.toppings.length > 0 && (
+                        {customization.toppings && customization.toppings.length > 0 && (
                           <div className="text-xs text-gray-600">
                             <span className="font-medium">Toppings: </span>
-                            <span>{item.customization.toppings.join(', ')}</span>
+                            <span>{customization.toppings.join(', ')}</span>
                           </div>
                         )}
                         
                         {/* Add-ons */}
-                        {item.customization.addOns && item.customization.addOns.length > 0 && (
+                        {customization.addOns && customization.addOns.length > 0 && (
                           <div className="text-xs text-gray-600">
                             <span className="font-medium">Add-ons: </span>
-                            <span>{item.customization.addOns.join(', ')}</span>
+                            <span>{customization.addOns.join(', ')}</span>
                           </div>
                         )}
                         
-                        {/* Extras */}
-                        {item.customization.extras && item.customization.extras.length > 0 && (
+                        {/* Extras - CORRIGIDO AQUI */}
+                        {customization.extras && customization.extras.length > 0 && (
                           <div className="text-xs text-gray-600">
                             <span className="font-medium">Extras: </span>
-                            <span>{item.customization.extras.join(', ')}</span>
+                            <span>{getExtrasDisplay(customization.extras).join(', ')}</span>
                           </div>
                         )}
                       </div>
@@ -372,7 +399,7 @@ export default function CheckoutPage() {
 
           {/* Forma de Pagamento */}
           <section>
-            <h3 className="text-lg font-bold mb-3 text-gray-700">Forma de Pagamento</h3>
+            <h3 className="text-lg font-bold mb-3 text-[#4F2712]">Forma de Pagamento</h3>
             <div className="space-y-3">
               <button
                 type="button"
@@ -458,19 +485,10 @@ export default function CheckoutPage() {
             type="submit"
             onClick={handleSubmit}
             disabled={isSubmitting}
-            className="w-full bg-rose-500 hover:bg-rose-600 disabled:bg-rose-300 text-white font-bold py-4 px-6 rounded-lg shadow-lg transition-colors flex items-center justify-center gap-2 disabled:cursor-not-allowed"
+            className="w-full bg-rose-500 hover:bg-rose-600 disabled:bg-rose-300 text-white font-bold py-4 px-6 rounded-lg shadow-lg transition-colors flex items-center justify-center gap-2"
           >
-            {isSubmitting ? (
-              <>
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                Processando...
-              </>
-            ) : (
-              <>
-                <ShoppingCartIcon className="h-5 w-5" />
-                Confirmar Pedido - R$ {finalTotal.toFixed(2)}
-              </>
-            )}
+            <ShoppingCartIcon className="h-5 w-5" />
+            {isSubmitting ? 'Processando...' : `Confirmar Pedido - R$ ${finalTotal.toFixed(2)}`}
           </button>
         </div>
       </footer>

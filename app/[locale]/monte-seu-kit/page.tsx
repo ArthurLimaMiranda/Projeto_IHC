@@ -1,9 +1,21 @@
 // app/customize/page.tsx
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { ChevronUpIcon, ChevronDownIcon, PlusIcon, ArrowRightIcon, ShoppingBagIcon, XMarkIcon, ShoppingCartIcon } from '@heroicons/react/24/solid';
+import { 
+  ChevronUpIcon, 
+  ChevronDownIcon, 
+  PlusIcon, 
+  ArrowRightIcon, 
+  ShoppingBagIcon, 
+  XMarkIcon,
+  MinusIcon,
+  CameraIcon,
+  UserIcon,
+  CalendarIcon,
+  ClockIcon
+} from '@heroicons/react/24/solid';
 import { Header } from '@/components/Client/Header';
 import { useCart } from '@/contexts/CartContext';
 
@@ -189,11 +201,25 @@ export default function CustomizeCakeKit() {
     frosting: null as number | null,
     toppings: [] as number[],
     addOns: [] as number[],
-    extras: [] as number[],
+    extras: [] as { id: number; quantity: number }[], // Agora com quantidade
+  });
+
+  const [orderInfo, setOrderInfo] = useState({
+    customerName: '',
+    eventDate: '',
+    eventTime: '',
+    observations: '',
+    description: '',
+    themePhoto: null as File | null,
+    themePhotoPreview: '',
+    allergies: '',
+    lactoseIntolerant: false,
+    otherRestrictions: ''
   });
 
   const [showConfirmationModal, setShowConfirmationModal] = useState(false);
   const [lastAddedItem, setLastAddedItem] = useState<any>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Atualizar step quando expandir seções
   useEffect(() => {
@@ -206,7 +232,6 @@ export default function CustomizeCakeKit() {
   }, [expandedSections]);
 
   const toggleSection = (sectionId: number) => {
-    // Não permitir colapsar todas as seções - sempre manter pelo menos uma expandida
     if (expandedSections.includes(sectionId) && expandedSections.length === 1) {
       return;
     }
@@ -243,7 +268,6 @@ export default function CustomizeCakeKit() {
       }
     });
 
-    // Se selecionou um sabor (passo 1 obrigatório), expandir automaticamente o próximo passo
     if (type === 'flavor' && id !== null) {
       setTimeout(() => {
         setExpandedSections(prev => {
@@ -252,6 +276,36 @@ export default function CustomizeCakeKit() {
         });
       }, 300);
     }
+  };
+
+  // Funções para gerenciar quantidade dos extras
+  const handleExtraQuantityChange = (id: number, quantity: number) => {
+    if (quantity < 0) return;
+    
+    setSelectedOptions(prev => {
+      const existingExtraIndex = prev.extras.findIndex(extra => extra.id === id);
+      
+      if (existingExtraIndex >= 0) {
+        if (quantity === 0) {
+          // Remove o extra se quantidade for 0
+          return {
+            ...prev,
+            extras: prev.extras.filter(extra => extra.id !== id)
+          };
+        } else {
+          // Atualiza a quantidade
+          const updatedExtras = [...prev.extras];
+          updatedExtras[existingExtraIndex] = { ...updatedExtras[existingExtraIndex], quantity };
+          return { ...prev, extras: updatedExtras };
+        }
+      } else {
+        // Adiciona novo extra com quantidade
+        return {
+          ...prev,
+          extras: [...prev.extras, { id, quantity }]
+        };
+      }
+    });
   };
 
   const calculateTotal = () => {
@@ -277,9 +331,9 @@ export default function CustomizeCakeKit() {
       total += addOn?.price || 0;
     });
     
-    selectedOptions.extras.forEach(extraId => {
-      const extra = extras.find(e => e.id === extraId);
-      total += extra?.price || 0;
+    selectedOptions.extras.forEach(extra => {
+      const extraItem = extras.find(e => e.id === extra.id);
+      total += (extraItem?.price || 0) * extra.quantity;
     });
     
     return total;
@@ -292,15 +346,40 @@ export default function CustomizeCakeKit() {
       3: 'Toppings',
       4: 'Add-Ons',
       5: 'Extras',
+      6: 'Informações do Pedido'
     };
     return titles[step as keyof typeof titles] || '';
   };
 
+  const handleOrderInfoChange = (field: string, value: any) => {
+    setOrderInfo(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleThemePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setOrderInfo(prev => ({
+        ...prev,
+        themePhoto: file,
+        themePhotoPreview: URL.createObjectURL(file)
+      }));
+    }
+  };
+
+  const removeThemePhoto = () => {
+    setOrderInfo(prev => ({
+      ...prev,
+      themePhoto: null,
+      themePhotoPreview: ''
+    }));
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
   const handleAddToCart = () => {
-    // Verificar se pelo menos o sabor foi selecionado
     if (!selectedOptions.flavor) {
       alert('Por favor, selecione um sabor para o bolo!');
-      // Expandir automaticamente a seção de sabores se não estiver expandida
       if (!expandedSections.includes(1)) {
         setExpandedSections(prev => [1, ...prev]);
       }
@@ -311,9 +390,11 @@ export default function CustomizeCakeKit() {
     const selectedFrosting = frostings.find(f => f.id === selectedOptions.frosting);
     const selectedToppings = toppings.filter(t => selectedOptions.toppings.includes(t.id));
     const selectedAddOns = addOns.filter(a => selectedOptions.addOns.includes(a.id));
-    const selectedExtras = extras.filter(e => selectedOptions.extras.includes(e.id));
+    const selectedExtras = selectedOptions.extras.map(extra => {
+      const extraItem = extras.find(e => e.id === extra.id);
+      return { ...extraItem, quantity: extra.quantity };
+    });
 
-    // Criar um nome descritivo para o item do carrinho
     let name = `Bolo de ${selectedFlavor?.name} Personalizado`;
     let description = `Sabor ${selectedFlavor?.name}`;
 
@@ -330,11 +411,11 @@ export default function CustomizeCakeKit() {
     }
 
     if (selectedExtras.length > 0) {
-      description += ` | Extras: ${selectedExtras.map(e => e.name).join(', ')}`;
+      description += ` | Extras: ${selectedExtras.map(e => `${e.quantity}x ${e.name}`).join(', ')}`;
     }
 
     const cartItem = {
-      id: Date.now(), // ID único baseado no timestamp
+      id: Date.now(),
       name,
       description,
       price: calculateTotal(),
@@ -345,8 +426,9 @@ export default function CustomizeCakeKit() {
         frosting: selectedFrosting?.name || 'Nenhuma',
         toppings: selectedToppings.map(t => t.name),
         addOns: selectedAddOns.map(a => a.name),
-        extras: selectedExtras.map(e => e.name),
+        extras: selectedExtras.map(e => ({ name: e.name, quantity: e.quantity })),
       },
+      orderInfo: { ...orderInfo }
     };
 
     addToCart(cartItem);
@@ -366,19 +448,30 @@ export default function CustomizeCakeKit() {
 
   const handleCustomizeAnother = () => {
     setShowConfirmationModal(false);
-    // Resetar todas as seleções para personalizar outro bolo
     setSelectedOptions({ flavor: null, frosting: null, toppings: [], addOns: [], extras: [] });
+    setOrderInfo({
+      customerName: '',
+      eventDate: '',
+      eventTime: '',
+      observations: '',
+      description: '',
+      themePhoto: null,
+      themePhotoPreview: '',
+      allergies: '',
+      lactoseIntolerant: false,
+      otherRestrictions: ''
+    });
     setExpandedSections([1]);
     setCurrentStep(1);
   };
 
-  // Determinar se uma seção pode ser acessada (só permite acessar a próxima seção após completar a anterior)
   const isSectionAccessible = (sectionId: number) => {
-    if (sectionId === 1) return true; // Sempre acessível
+    if (sectionId === 1) return true;
     if (sectionId === 2) return selectedOptions.flavor !== null;
     if (sectionId === 3) return selectedOptions.flavor !== null;
     if (sectionId === 4) return selectedOptions.flavor !== null;
     if (sectionId === 5) return selectedOptions.flavor !== null;
+    if (sectionId === 6) return selectedOptions.flavor !== null;
     return false;
   };
 
@@ -408,7 +501,7 @@ export default function CustomizeCakeKit() {
             className="w-full h-full object-cover"
           />
           <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex gap-2">
-            {[1, 2, 3, 4, 5].map((step) => (
+            {[1, 2, 3, 4, 5, 6].map((step) => (
               <div
                 key={step}
                 className={`h-2 w-8 rounded-full transition-colors ${
@@ -434,20 +527,21 @@ export default function CustomizeCakeKit() {
           {/* Progress */}
           <div className="mb-6">
             <div className="flex justify-between text-sm mb-2">
-              <span className="text-gray-700">Passo {Math.max(1, currentStep)} de 5</span>
+              <span className="text-gray-700">Passo {Math.max(1, currentStep)} de 6</span>
               <span className="text-rose-600 font-semibold">{getStepTitle(Math.max(1, currentStep))}</span>
             </div>
             <div className="w-full bg-gray-200 rounded-full h-2">
               <div 
                 className="bg-rose-500 h-2 rounded-full transition-all duration-300"
-                style={{ width: `${(Math.max(1, currentStep) / 5) * 100}%` }}
+                style={{ width: `${(Math.max(1, currentStep) / 6) * 100}%` }}
               />
             </div>
           </div>
 
           {/* Customization Sections */}
           <div className="space-y-4">
-            {/* Cake Flavor - SEMPRE ACESSÍVEL */}
+            {/* Seções 1-4 permanecem iguais */}
+            {/* Cake Flavor */}
             <section className={`bg-white rounded-xl shadow-sm p-4 ${
               !getSectionState(1).isAccessible ? 'opacity-50' : ''
             }`}>
@@ -670,93 +764,477 @@ export default function CustomizeCakeKit() {
               )}
             </section>
 
-            {/* Extras */}
+            {/* Extras com Quantidade */}
+            {/* Extras com Quantidade - Versão Atualizada */}
+<section className={`bg-white rounded-xl shadow-sm p-4 transition-all ${
+  !getSectionState(5).isAccessible ? 'opacity-50 pointer-events-none' : ''
+}`}>
+  <button
+    onClick={() => getSectionState(5).isAccessible && toggleSection(5)}
+    className="flex items-center justify-between w-full text-left"
+    disabled={!getSectionState(5).isAccessible}
+  >
+    <div>
+      <h3 className={`text-xl font-bold ${
+        getSectionState(5).isAccessible ? 'text-gray-800' : 'text-gray-400'
+      }`}>
+        5. Doces e Salgados Extras
+        {!getSectionState(5).isAccessible && ' (Selecione um sabor primeiro)'}
+      </h3>
+      <p className="text-sm text-gray-600 mt-1">
+        {selectedOptions.extras.length > 0 ? `${selectedOptions.extras.reduce((sum, extra) => sum + extra.quantity, 0)} item(s) selecionado(s)!` : 'Complete sua festa com delícias extras'}
+      </p>
+    </div>
+    {expandedSections.includes(5) ? (
+      <ChevronUpIcon className={`h-5 w-5 ${
+        getSectionState(5).isAccessible ? 'text-rose-500' : 'text-gray-300'
+      }`} />
+    ) : (
+      <ChevronDownIcon className={`h-5 w-5 ${
+        getSectionState(5).isAccessible ? 'text-gray-400' : 'text-gray-300'
+      }`} />
+    )}
+  </button>
+
+  {expandedSections.includes(5) && getSectionState(5).isAccessible && (
+    <div className="mt-4">
+      {/* Doces */}
+      <div className="mb-6">
+        <h4 className="font-semibold text-gray-800 mb-3">Doces</h4>
+        <div className="grid grid-cols-2 gap-3">
+          {extras.filter(extra => extra.category === 'doces').map((extra) => {
+            const selectedExtra = selectedOptions.extras.find(e => e.id === extra.id);
+            const quantity = selectedExtra ? selectedExtra.quantity : 0;
+
+            return (
+              <div key={extra.id} className={`flex flex-col items-center p-3 rounded-lg border-2 transition-all ${
+                quantity > 0
+                  ? 'border-purple-500 bg-purple-50'
+                  : 'border-gray-200 bg-white hover:border-purple-300'
+              }`}>
+                <div className="w-16 h-16 rounded-full bg-gradient-to-br from-purple-100 to-purple-200 mb-2 flex items-center justify-center">
+                  <span className="text-purple-500 text-xs font-bold">DOCE</span>
+                </div>
+                <span className="font-semibold text-gray-800 text-sm text-center">
+                  {extra.name}
+                </span>
+                <span className="text-sm text-purple-600 font-medium mt-1">
+                  R$ {extra.price.toFixed(2)} cada
+                </span>
+                
+                {/* Controles de Quantidade Atualizados */}
+                <div className="flex flex-col items-center gap-2 mt-2 w-full">
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => handleExtraQuantityChange(extra.id, quantity - 1)}
+                      disabled={quantity === 0}
+                      className={`flex h-6 w-6 items-center justify-center rounded-full transition-colors ${
+                        quantity === 0 
+                          ? 'bg-gray-100 text-gray-400 cursor-not-allowed' 
+                          : 'bg-purple-100 text-purple-600 hover:bg-purple-200'
+                      }`}
+                    >
+                      <MinusIcon className="h-3 w-3" />
+                    </button>
+                    
+                    {/* Input numérico para inserção manual */}
+                    <div className="relative">
+                      <input
+                        type="number"
+                        min="0"
+                        max="100"
+                        value={quantity}
+                        onChange={(e) => {
+                          const newQuantity = parseInt(e.target.value) || 0;
+                          if (newQuantity >= 0 && newQuantity <= 100) {
+                            handleExtraQuantityChange(extra.id, newQuantity);
+                          }
+                        }}
+                        onBlur={(e) => {
+                          // Se estiver vazio, define como 0
+                          if (e.target.value === '') {
+                            handleExtraQuantityChange(extra.id, 0);
+                          }
+                        }}
+                        className="w-16 text-center border border-gray-300 rounded-md py-1 px-2 text-sm [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                        placeholder="0"
+                      />
+                      <div className="absolute inset-y-0 right-1 flex flex-col justify-center">
+                        <div className="flex flex-col">
+                          <button
+                            type="button"
+                            onClick={() => handleExtraQuantityChange(extra.id, quantity + 1)}
+                            className="h-2 w-3 flex items-center justify-center text-gray-400 hover:text-purple-600"
+                          >
+                            <ChevronUpIcon className="h-2 w-2" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleExtraQuantityChange(extra.id, quantity - 1)}
+                            className="h-2 w-3 flex items-center justify-center text-gray-400 hover:text-purple-600"
+                          >
+                            <ChevronDownIcon className="h-2 w-2" />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <button
+                      onClick={() => handleExtraQuantityChange(extra.id, quantity + 1)}
+                      className="flex h-6 w-6 items-center justify-center rounded-full bg-purple-100 text-purple-600 hover:bg-purple-200 transition-colors"
+                    >
+                      <PlusIcon className="h-3 w-3" />
+                    </button>
+                  </div>
+
+                  {/* Botão rápido para quantidades comuns */}
+                  {quantity === 0 && (
+                    <div className="flex gap-1 mt-1">
+                      <button
+                        onClick={() => handleExtraQuantityChange(extra.id, 10)}
+                        className="text-xs bg-purple-100 text-purple-600 px-2 py-1 rounded hover:bg-purple-200 transition-colors"
+                      >
+                        10
+                      </button>
+                      <button
+                        onClick={() => handleExtraQuantityChange(extra.id, 25)}
+                        className="text-xs bg-purple-100 text-purple-600 px-2 py-1 rounded hover:bg-purple-200 transition-colors"
+                      >
+                        25
+                      </button>
+                      <button
+                        onClick={() => handleExtraQuantityChange(extra.id, 50)}
+                        className="text-xs bg-purple-100 text-purple-600 px-2 py-1 rounded hover:bg-purple-200 transition-colors"
+                      >
+                        50
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {quantity > 0 && (
+                  <div className="text-center mt-2">
+                    <span className="text-xs text-purple-600 font-medium">
+                      Total: R$ {(extra.price * quantity).toFixed(2)}
+                    </span>
+                    <div className="text-xs text-gray-500 mt-1">
+                      {quantity} unidade(s)
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Salgados */}
+      <div>
+        <h4 className="font-semibold text-gray-800 mb-3">Salgados</h4>
+        <div className="grid grid-cols-2 gap-3">
+          {extras.filter(extra => extra.category === 'salgados').map((extra) => {
+            const selectedExtra = selectedOptions.extras.find(e => e.id === extra.id);
+            const quantity = selectedExtra ? selectedExtra.quantity : 0;
+
+            return (
+              <div key={extra.id} className={`flex flex-col items-center p-3 rounded-lg border-2 transition-all ${
+                quantity > 0
+                  ? 'border-orange-500 bg-orange-50'
+                  : 'border-gray-200 bg-white hover:border-orange-300'
+              }`}>
+                <div className="w-16 h-16 rounded-full bg-gradient-to-br from-orange-100 to-orange-200 mb-2 flex items-center justify-center">
+                  <span className="text-orange-500 text-xs font-bold">SALG</span>
+                </div>
+                <span className="font-semibold text-gray-800 text-sm text-center">
+                  {extra.name}
+                </span>
+                <span className="text-sm text-orange-600 font-medium mt-1">
+                  R$ {extra.price.toFixed(2)} cada
+                </span>
+                
+                {/* Controles de Quantidade Atualizados */}
+                <div className="flex flex-col items-center gap-2 mt-2 w-full">
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => handleExtraQuantityChange(extra.id, quantity - 1)}
+                      disabled={quantity === 0}
+                      className={`flex h-6 w-6 items-center justify-center rounded-full transition-colors ${
+                        quantity === 0 
+                          ? 'bg-gray-100 text-gray-400 cursor-not-allowed' 
+                          : 'bg-orange-100 text-orange-600 hover:bg-orange-200'
+                      }`}
+                    >
+                      <MinusIcon className="h-3 w-3" />
+                    </button>
+                    
+                    {/* Input numérico para inserção manual */}
+                    <div className="relative">
+                      <input
+                        type="number"
+                        min="0"
+                        max="100"
+                        value={quantity}
+                        onChange={(e) => {
+                          const newQuantity = parseInt(e.target.value) || 0;
+                          if (newQuantity >= 0 && newQuantity <= 100) {
+                            handleExtraQuantityChange(extra.id, newQuantity);
+                          }
+                        }}
+                        onBlur={(e) => {
+                          // Se estiver vazio, define como 0
+                          if (e.target.value === '') {
+                            handleExtraQuantityChange(extra.id, 0);
+                          }
+                        }}
+                        className="w-16 text-center border border-gray-300 rounded-md py-1 px-2 text-sm [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                        placeholder="0"
+                      />
+                      <div className="absolute inset-y-0 right-1 flex flex-col justify-center">
+                        <div className="flex flex-col">
+                          <button
+                            type="button"
+                            onClick={() => handleExtraQuantityChange(extra.id, quantity + 1)}
+                            className="h-2 w-3 flex items-center justify-center text-gray-400 hover:text-orange-600"
+                          >
+                            <ChevronUpIcon className="h-2 w-2" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleExtraQuantityChange(extra.id, quantity - 1)}
+                            className="h-2 w-3 flex items-center justify-center text-gray-400 hover:text-orange-600"
+                          >
+                            <ChevronDownIcon className="h-2 w-2" />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <button
+                      onClick={() => handleExtraQuantityChange(extra.id, quantity + 1)}
+                      className="flex h-6 w-6 items-center justify-center rounded-full bg-orange-100 text-orange-600 hover:bg-orange-200 transition-colors"
+                    >
+                      <PlusIcon className="h-3 w-3" />
+                    </button>
+                  </div>
+
+                  {/* Botão rápido para quantidades comuns */}
+                  {quantity === 0 && (
+                    <div className="flex gap-1 mt-1">
+                      <button
+                        onClick={() => handleExtraQuantityChange(extra.id, 10)}
+                        className="text-xs bg-orange-100 text-orange-600 px-2 py-1 rounded hover:bg-orange-200 transition-colors"
+                      >
+                        10
+                      </button>
+                      <button
+                        onClick={() => handleExtraQuantityChange(extra.id, 25)}
+                        className="text-xs bg-orange-100 text-orange-600 px-2 py-1 rounded hover:bg-orange-200 transition-colors"
+                      >
+                        25
+                      </button>
+                      <button
+                        onClick={() => handleExtraQuantityChange(extra.id, 50)}
+                        className="text-xs bg-orange-100 text-orange-600 px-2 py-1 rounded hover:bg-orange-200 transition-colors"
+                      >
+                        50
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {quantity > 0 && (
+                  <div className="text-center mt-2">
+                    <span className="text-xs text-orange-600 font-medium">
+                      Total: R$ {(extra.price * quantity).toFixed(2)}
+                    </span>
+                    <div className="text-xs text-gray-500 mt-1">
+                      {quantity} unidade(s)
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Resumo dos Extras Selecionados */}
+      {selectedOptions.extras.length > 0 && (
+        <div className="mt-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
+          <h5 className="font-semibold text-gray-800 mb-2">Resumo dos Extras Selecionados</h5>
+          <div className="space-y-2 text-sm">
+            {selectedOptions.extras.map(extra => {
+              const extraItem = extras.find(e => e.id === extra.id);
+              if (!extraItem) return null;
+              
+              return (
+                <div key={extra.id} className="flex justify-between items-center">
+                  <span className="text-gray-600">
+                    {extraItem.name} × {extra.quantity}
+                  </span>
+                  <span className="font-medium text-gray-800">
+                    R$ {(extraItem.price * extra.quantity).toFixed(2)}
+                  </span>
+                </div>
+              );
+            })}
+            <div className="border-t border-gray-300 pt-2 mt-2">
+              <div className="flex justify-between font-semibold">
+                <span>Total em Extras:</span>
+                <span className="text-rose-600">
+                  R$ {selectedOptions.extras.reduce((sum, extra) => {
+                    const extraItem = extras.find(e => e.id === extra.id);
+                    return sum + (extraItem?.price || 0) * extra.quantity;
+                  }, 0).toFixed(2)}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  )}
+</section>
+
+            {/* Informações do Pedido */}
             <section className={`bg-white rounded-xl shadow-sm p-4 transition-all ${
-              !getSectionState(5).isAccessible ? 'opacity-50 pointer-events-none' : ''
+              !getSectionState(6).isAccessible ? 'opacity-50 pointer-events-none' : ''
             }`}>
               <button
-                onClick={() => getSectionState(5).isAccessible && toggleSection(5)}
+                onClick={() => getSectionState(6).isAccessible && toggleSection(6)}
                 className="flex items-center justify-between w-full text-left"
-                disabled={!getSectionState(5).isAccessible}
+                disabled={!getSectionState(6).isAccessible}
               >
                 <div>
                   <h3 className={`text-xl font-bold ${
-                    getSectionState(5).isAccessible ? 'text-gray-800' : 'text-gray-400'
+                    getSectionState(6).isAccessible ? 'text-gray-800' : 'text-gray-400'
                   }`}>
-                    5. Doces e Salgados Extras
-                    {!getSectionState(5).isAccessible && ' (Selecione um sabor primeiro)'}
+                    6. Informações do Pedido
+                    {!getSectionState(6).isAccessible && ' (Selecione um sabor primeiro)'}
                   </h3>
                   <p className="text-sm text-gray-600 mt-1">
-                    {selectedOptions.extras.length > 0 ? `${selectedOptions.extras.length} extra(s) selecionado(s)!` : 'Complete sua festa com delícias extras'}
+                    Informações importantes para sua encomenda
                   </p>
                 </div>
-                {expandedSections.includes(5) ? (
+                {expandedSections.includes(6) ? (
                   <ChevronUpIcon className={`h-5 w-5 ${
-                    getSectionState(5).isAccessible ? 'text-rose-500' : 'text-gray-300'
+                    getSectionState(6).isAccessible ? 'text-rose-500' : 'text-gray-300'
                   }`} />
                 ) : (
                   <ChevronDownIcon className={`h-5 w-5 ${
-                    getSectionState(5).isAccessible ? 'text-gray-400' : 'text-gray-300'
+                    getSectionState(6).isAccessible ? 'text-gray-400' : 'text-gray-300'
                   }`} />
                 )}
               </button>
 
-              {expandedSections.includes(5) && getSectionState(5).isAccessible && (
-                <div className="mt-4">
-                  {/* Doces */}
-                  <div className="mb-6">
-                    <h4 className="font-semibold text-gray-800 mb-3">Doces</h4>
-                    <div className="grid grid-cols-2 gap-3">
-                      {extras.filter(extra => extra.category === 'doces').map((extra) => (
+              {expandedSections.includes(6) && getSectionState(6).isAccessible && (
+                <div className="mt-4 space-y-4">
+                  {/* Descrição da Encomenda */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Descrição da Encomenda
+                    </label>
+                    <textarea
+                      value={orderInfo.description}
+                      onChange={(e) => handleOrderInfoChange('description', e.target.value)}
+                      rows={3}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-rose-500 focus:border-transparent"
+                      placeholder="Descreva como você imagina seu bolo, cores preferidas, tema da festa..."
+                    />
+                  </div>
+
+                  {/* Foto do Tema */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      <CameraIcon className="h-4 w-4 inline mr-1" />
+                      Foto do Tema Desejado
+                    </label>
+                    <input
+                      type="file"
+                      ref={fileInputRef}
+                      onChange={handleThemePhotoChange}
+                      accept="image/*"
+                      className="hidden"
+                    />
+                    {orderInfo.themePhotoPreview ? (
+                      <div className="relative">
+                        <img
+                          src={orderInfo.themePhotoPreview}
+                          alt="Preview do tema"
+                          className="w-full h-48 object-cover rounded-lg"
+                        />
                         <button
-                          key={extra.id}
-                          onClick={() => handleOptionSelect('extras', extra.id, true)}
-                          className={`flex flex-col items-center p-3 rounded-lg border-2 transition-all ${
-                            selectedOptions.extras.includes(extra.id)
-                              ? 'border-purple-500 bg-purple-50'
-                              : 'border-gray-200 bg-white hover:border-purple-300'
-                          }`}
+                          type="button"
+                          onClick={removeThemePhoto}
+                          className="absolute top-2 right-2 bg-red-500 text-white p-1 rounded-full hover:bg-red-600 transition-colors"
                         >
-                          <div className="w-16 h-16 rounded-full bg-gradient-to-br from-purple-100 to-purple-200 mb-2 flex items-center justify-center">
-                            <span className="text-purple-500 text-xs font-bold">DOCE</span>
-                          </div>
-                          <span className="font-semibold text-gray-800 text-sm text-center">
-                            {extra.name}
-                          </span>
-                          <span className="text-sm text-purple-600 font-medium mt-1">
-                            +R$ {extra.price.toFixed(2)}
-                          </span>
+                          <XMarkIcon className="h-4 w-4" />
                         </button>
-                      ))}
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => fileInputRef.current?.click()}
+                        className="w-full border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-rose-400 transition-colors"
+                      >
+                        <div className="flex flex-col items-center">
+                          <CameraIcon className="h-8 w-8 text-gray-400 mb-2" />
+                          <span className="text-sm text-gray-600">Clique para adicionar uma foto do tema</span>
+                          <span className="text-xs text-gray-400 mt-1">Formatos: JPG, PNG, GIF</span>
+                        </div>
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Observações e Restrições */}
+                  <div className="space-y-3">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Observações (Alergias, Intolerâncias, etc.)
+                      </label>
+                      <textarea
+                        value={orderInfo.observations}
+                        onChange={(e) => handleOrderInfoChange('observations', e.target.value)}
+                        rows={3}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-rose-500 focus:border-transparent"
+                        placeholder="Alguma alergia alimentar? Intolerância a lactose? Outras restrições?"
+                      />
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        id="lactoseIntolerant"
+                        checked={orderInfo.lactoseIntolerant}
+                        onChange={(e) => handleOrderInfoChange('lactoseIntolerant', e.target.checked)}
+                        className="h-4 w-4 text-rose-500 focus:ring-rose-500 border-gray-300 rounded"
+                      />
+                      <label htmlFor="lactoseIntolerant" className="text-sm text-gray-700">
+                        Intolerante à lactose
+                      </label>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Outras Restrições Alimentares
+                      </label>
+                      <input
+                        type="text"
+                        value={orderInfo.otherRestrictions}
+                        onChange={(e) => handleOrderInfoChange('otherRestrictions', e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-rose-500 focus:border-transparent"
+                        placeholder="Ex: Vegano, sem glúten, sem açúcar..."
+                      />
                     </div>
                   </div>
 
-                  {/* Salgados */}
-                  <div>
-                    <h4 className="font-semibold text-gray-800 mb-3">Salgados</h4>
-                    <div className="grid grid-cols-2 gap-3">
-                      {extras.filter(extra => extra.category === 'salgados').map((extra) => (
-                        <button
-                          key={extra.id}
-                          onClick={() => handleOptionSelect('extras', extra.id, true)}
-                          className={`flex flex-col items-center p-3 rounded-lg border-2 transition-all ${
-                            selectedOptions.extras.includes(extra.id)
-                              ? 'border-orange-500 bg-orange-50'
-                              : 'border-gray-200 bg-white hover:border-orange-300'
-                          }`}
-                        >
-                          <div className="w-16 h-16 rounded-full bg-gradient-to-br from-orange-100 to-orange-200 mb-2 flex items-center justify-center">
-                            <span className="text-orange-500 text-xs font-bold">SALG</span>
-                          </div>
-                          <span className="font-semibold text-gray-800 text-sm text-center">
-                            {extra.name}
-                          </span>
-                          <span className="text-sm text-orange-600 font-medium mt-1">
-                            +R$ {extra.price.toFixed(2)}
-                          </span>
-                        </button>
-                      ))}
-                    </div>
+                  {/* Aviso sobre WhatsApp */}
+                  <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+                    <p className="text-sm text-amber-800">
+                      <strong>Importante:</strong> Após finalizar o pedido, entraremos em contato via WhatsApp 
+                      para confirmar todos os detalhes e combinar a entrega. Certifique-se de que as informações 
+                      estão corretas!
+                    </p>
                   </div>
                 </div>
               )}
@@ -766,25 +1244,31 @@ export default function CustomizeCakeKit() {
       </main>
 
       {/* Fixed Footer */}
-      {/* Fixed Footer */}
-      <footer className="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-sm border-t border-gray-200 p-4">
+      <footer className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-sm border-t border-gray-200 p-4">
         <div className="flex items-center justify-between max-w-4xl mx-auto">
           <div className="text-left">
             <span className="text-sm text-gray-600">Preço Total</span>
-            <p className="text-xl font-bold text-gray-800">
+            <p className="text-lg font-bold text-gray-800">
               R$ {calculateTotal().toFixed(2)}
             </p>
           </div>
           <button 
             onClick={handleAddToCart}
             disabled={!selectedOptions.flavor}
-            className={`px-6 py-3 rounded-full font-bold transition-colors shadow-lg flex items-center gap-2 ${
+            className={`px-3 py-3 text-sm rounded-full font-bold transition-colors shadow-lg flex items-center gap-2 ${
               selectedOptions.flavor
                 ? 'bg-rose-500 hover:bg-rose-600 text-white hover:shadow-xl'
                 : 'bg-gray-300 text-gray-500 cursor-not-allowed'
             }`}
           >
-            {selectedOptions.flavor ? 'Adicionar ao Carrinho' : 'Selecione um Sabor'}
+            {selectedOptions.flavor ? (
+              <>
+                <ShoppingBagIcon className="h-5 w-5" />
+                Adicionar ao Carrinho
+              </>
+            ) : (
+              'Selecione um Sabor'
+            )}
           </button>
         </div>
       </footer>
@@ -793,7 +1277,6 @@ export default function CustomizeCakeKit() {
       {showConfirmationModal && lastAddedItem && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl max-w-md w-full p-6 animate-scale-in">
-            {/* Header do Modal */}
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-xl font-bold text-gray-800">Item Adicionado!</h3>
               <button
@@ -804,9 +1287,8 @@ export default function CustomizeCakeKit() {
               </button>
             </div>
 
-            {/* Conteúdo do Modal */}
             <div className="mb-6">
-              <div className="flex items-center gap-4 mb-4 bg-rose-50 rounded-lg">
+              <div className="flex items-center gap-4 mb-4 bg-rose-50 rounded-lg p-3">
                 <img
                   src={lastAddedItem.image}
                   alt={lastAddedItem.name}
@@ -823,9 +1305,14 @@ export default function CustomizeCakeKit() {
               <p className="text-gray-600 text-center mb-2">
                 Seu bolo personalizado foi adicionado ao carrinho com sucesso!
               </p>
+              
+              <div className="bg-green-50 border border-green-200 rounded-lg p-3 mt-3">
+                <p className="text-sm text-green-800 text-center">
+                  <strong>Próximo passo:</strong> Entraremos em contato via WhatsApp para confirmar os detalhes!
+                </p>
+              </div>
             </div>
 
-            {/* Botões de Ação */}
             <div className="space-y-3">
               <button
                 onClick={handleGoToCart}
@@ -851,11 +1338,6 @@ export default function CustomizeCakeKit() {
                 Continuar Navegando
               </button>
             </div>
-
-            {/* Mensagem adicional */}
-            <p className="text-xs text-gray-500 text-center mt-4">
-              Você pode editar seu pedido a qualquer momento no carrinho
-            </p>
           </div>
         </div>
       )}

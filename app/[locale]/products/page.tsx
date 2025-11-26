@@ -82,7 +82,7 @@ const bolos = [
     description: "Decoration naked cake com flores",
     detailedDescription: "Bolo no estilo naked cake com efeito rústico, decorado com flores naturais. Perfeito para casamentos ao ar livre.",
     price: 200.00,
-    image: "https://images.unsplash.com/photo-1512486130939-2c4f79935e4f?w=400&h=300&fit=crop",
+    image: "https://images.unsplash.com/photo-1464349095431-e9a21285b5f3?w=400&h=300&fit=crop",
     category: "Casamento",
     flavors: ["Red Velvet", "Baunilha"],
     size: "3 andares",

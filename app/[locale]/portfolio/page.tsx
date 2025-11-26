@@ -22,7 +22,6 @@ const portfolioItems = [
     description: "Bolo de noiva com decoração floral natural e detalhes em dourado",
     images: [
       "https://lh3.googleusercontent.com/aida-public/AB6AXuAdiU8oQSTRRohMxEkg4V_39E7TEhf9bfn1am1mpr3q9eB9ba-E1vvMYK9dBqnP7hv5DOKn8k15UIUi76aLGRw5s3OHaon2SVhu93YfZ6zYrcSZYtL-RnN6kFa0cUXBOnLVQNDd3Yog0KzAyWRjcYwZzWrEO7HPiCPNHxZnF1Gf86g5_WUCE3rpENWixeNkD-fIyFn9hpOaKQKuIp9hx7ZjZktp38nJbYR_2-UU21N-ktN6Sn1kSWKvsPws6i5jpeVHv_C3JLybsLKn",
-      "https://images.unsplash.com/photo-1512486130939-2c4f79935e4f?w=800&h=600&fit=crop",
       "https://images.unsplash.com/photo-1535254973040-607b474cb50d?w=800&h=600&fit=crop"
     ],
     tags: ["Elegante", "Floral", "Dourado", "2 Andares"],
@@ -58,7 +57,7 @@ const portfolioItems = [
     description: "Tema delicado em azul e branco com nuvens e arco-íris",
     images: [
       "https://images.unsplash.com/photo-1559620192-032c4bc4674e?w=800&h=600&fit=crop",
-      "https://images.unsplash.com/photo-1588196749597-9ff075ee6b5b?w=800&h=600&fit=crop"
+      "https://images.pexels.com/photos/162688/cheesecake-table-dessert-cream-162688.jpeg?w=400&h=300&fit=crop"
     ],
     tags: ["Bebê", "Nuvens", "Delicado", "Unissex"],
     featured: true
@@ -80,8 +79,8 @@ const portfolioItems = [
     category: "Casamento",
     description: "Naked cake com flores do campo e estilo campestre",
     images: [
-      "https://images.unsplash.com/photo-1512486130939-2c4f79935e4f?w=800&h=600&fit=crop",
-      "https://images.unsplash.com/photo-1535254973040-607b474cb50d?w=800&h=600&fit=crop"
+      "https://images.unsplash.com/photo-1535254973040-607b474cb50d?w=800&h=600&fit=crop",
+      "https://images.pexels.com/photos/2531546/pexels-photo-2531546.jpeg?w=400&h=300&fit=crop",
     ],
     tags: ["Rústico", "Naked Cake", "Flores", "Campestre"],
     featured: true
@@ -92,7 +91,7 @@ const portfolioItems = [
     category: "Aniversário",
     description: "Bolo temático de super heróis para festa infantil",
     images: [
-      "https://images.unsplash.com/photo-1571115764595-644a1f56a55c?w=800&h=600&fit=crop"
+      "https://images.pexels.com/photos/2147834/pexels-photo-2147834.jpeg?w=400&h=300&fit=crop"
     ],
     tags: ["Infantil", "Super Heróis", "Colorido", "Divertido"],
     featured: false
@@ -103,7 +102,7 @@ const portfolioItems = [
     category: "Aniversário",
     description: "Elegante bolo de aniversário adulto com detalhes em dourado",
     images: [
-      "https://images.unsplash.com/photo-1558301214-0c28b4d0fcb5?w=800&h=600&fit=crop"
+      "https://images.pexels.com/photos/264939/pexels-photo-264939.jpeg?w=400&h=300&fit=crop"
     ],
     tags: ["Elegante", "Dourado", "Adulto", "Sofisticado"],
     featured: true
@@ -442,17 +441,15 @@ export default function PortfolioPage() {
               </div>
 
               {/* Conteúdo */}
-              <div className="p-6">
+              <div className="py-6 px-4">
                 <div className="flex justify-between items-start mb-4">
                   <div>
-                    <h2 className="text-2xl font-bold text-gray-800 mb-2">
+                    <h2 className="text-lg font-bold text-[#4F2712] mb-2">
                       {selectedItem.title}
                     </h2>
                     <p className="text-gray-600 mb-4">{selectedItem.description}</p>
                   </div>
-                  <span className="bg-rose-100 text-rose-700 px-3 py-1 rounded-full text-sm font-medium">
-                    {selectedItem.category}
-                  </span>
+                  
                 </div>
 
                 <div className="flex flex-wrap gap-2 mb-6">
@@ -466,14 +463,14 @@ export default function PortfolioPage() {
                   ))}
                 </div>
 
-                <div className="flex gap-3">
+                <div className="flex flex-col gap-3">
                   <button
                     onClick={() => handleRequestQuote(selectedItem.title)}
                     className="flex-1 bg-rose-500 hover:bg-rose-600 text-white font-bold py-3 px-6 rounded-lg transition-colors text-center"
                   >
-                    Quero um Orçamento
+                    Fazer Orçamento
                   </button>
-                  <button className="flex items-center gap-2 border border-gray-300 text-gray-700 hover:bg-gray-50 font-medium py-3 px-4 rounded-lg transition-colors">
+                  <button className="flex items-center justify-center gap-2 border border-gray-300 text-gray-700 hover:bg-gray-50 font-medium py-3 px-4 rounded-lg transition-colors">
                     <ShareIcon className="h-5 w-5" />
                     Compartilhar
                   </button>

@@ -246,7 +246,7 @@ export default function TrackOrderPage() {
                   <p className="text-sm text-gray-500">
                     Verifique se o número está correto ou entre em contato conosco.
                   </p>
-                  <div className="mt-4 p-4 bg-rose-50 rounded-lg">
+                  <div className="mt-4 p-4 bg-[#FFFFF4] rounded-lg">
                     <p className="text-sm text-rose-600">
                       <strong>Dica:</strong> Use o mesmo número que você usou ao fazer o pedido.
                     </p>
@@ -254,9 +254,12 @@ export default function TrackOrderPage() {
                 </div>
               ) : (
                 <div className="space-y-6">
-                  <div className="bg-rose-50 rounded-lg p-4 mb-4">
+                  <div className="bg-[#FFFFF4] rounded-lg p-4 mb-4">
                     <p className="text-sm text-rose-600 text-center">
-                      Encontramos {orders.length} pedido(s) para {formatPhoneDisplay(phone)}
+                      Encontramos {orders.length} pedido(s) para
+                    </p>
+                    <p className="text-sm text-rose-600 text-center">
+                      {formatPhoneDisplay(phone)}
                     </p>
                   </div>
 
@@ -268,7 +271,7 @@ export default function TrackOrderPage() {
                       <div key={order.id} className="border border-gray-200 rounded-lg p-4">
                         {/* Cabeçalho do Pedido */}
                         <div className="flex flex-row justify-between items-start mb-4">
-                          <div>
+                          <div className='w-[60%]'>
                             <h3 className="font-semibold text-[#4F2712]">Pedido #{order.id}</h3>
                             <p className="text-sm text-gray-600">
                               {formatDate(order.orderDate)}
@@ -280,9 +283,9 @@ export default function TrackOrderPage() {
                               <strong>Telefone:</strong> {formatPhoneDisplay(order.customer.phone)}
                             </p>
                           </div>
-                          <span className={`px-3 py-1 rounded-full text-sm font-medium ${statusInfo.bgColor} ${statusInfo.color}`}>
+                          <div className={`flex w-[40%] py-1 rounded-full text-sm font-medium justify-center items-center ${statusInfo.bgColor} ${statusInfo.color}`}>
                             {statusInfo.label}
-                          </span>
+                          </div>
                         </div>
 
                         {/* Barra de Progresso */}
@@ -309,25 +312,24 @@ export default function TrackOrderPage() {
                               
                               return (
                                 <li key={index} className="flex flex-col gap-3 py-3 bg-[#B95760] bg-opacity-[25%] px-3 rounded-lg">
-                                  <div className='flex flex-row items-center gap-x-[3%]'>
+                                  <div className='flex flex-row items-center gap-x-4'>
                                     {/* Imagem do Bolo */}
                                     <img
                                       src={item.image}
                                       alt={item.name}
-                                      className="w-[20%] rounded-lg object-cover flex-shrink-0"
+                                      className="w-[25%] rounded-lg object-cover flex-shrink-0"
                                     />
 
-                                      <p className="font-semibold text-gray-800 text-center px-5 w-[42%]">{item.name}</p>
-
-                                      <p className="font-semibold text-right text-sm text-rose-600 w-[32%]">
-                                        {item.quantity}x R$ {item.price.toFixed(2)}
-                                      </p>
+                                      <p className="w-[75%] font-semibold text-base text-gray-800 text-left">{item.name}</p>
+                                      
                                   </div>
 
                                   
                                   <div className="flex-1">
                                     {/* Informações Básicas */}
-                                    
+                                    <p className="font-semibold text-right text-base pt-3 text-rose-600">
+                                        {item.quantity}x R$ {item.price.toFixed(2)}
+                                      </p>
                                     {/* Customizações Básicas (sempre visíveis) */}
                                     <div className="text-sm text-gray-600 space-y-1  py-2">
                                       <div><strong>Sabor:</strong> {item.customization?.flavor}</div>

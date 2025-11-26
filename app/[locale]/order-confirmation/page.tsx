@@ -92,7 +92,7 @@ export default function OrderConfirmationPage() {
 
   if (!order) {
     return (
-      <div className="min-h-screen bg-rose-50">
+      <div className="min-h-screen bg-[#FFFFF4]">
         <Header />
         <div className="container mx-auto max-w-md p-4 flex items-center justify-center min-h-[60vh]">
           <div className="text-center">
@@ -115,11 +115,11 @@ export default function OrderConfirmationPage() {
   };
 
   return (
-    <div className="min-h-screen bg-rose-50">
+    <div className="min-h-screen bg-[#FFFFF4]">
       <Header />
 
       <main className="container mx-auto max-w-md p-4 pb-32">
-        <div className="bg-white rounded-2xl p-3 shadow-sm mt-6">
+        <div className=" rounded-2xl p-3 shadow-sm mt-6">
           {/* Ícone de Confirmação */}
           <div className="text-center mb-6">
             <div className="w-20 h-20 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -133,7 +133,7 @@ export default function OrderConfirmationPage() {
           </div>
 
           {/* Número do Pedido */}
-          <div className="bg-rose-50 rounded-lg p-4 text-center mb-6">
+          <div className="rounded-lg p-4 text-center mb-6">
             <p className="text-sm text-gray-600">Número do Pedido</p>
             <p className="text-xl font-bold text-rose-600">{order.id}</p>
             <p className="text-sm text-gray-600 mt-1">
@@ -169,7 +169,7 @@ export default function OrderConfirmationPage() {
                   <p className="text-gray-600 text-sm">{order.customer.address}</p>
                   <p className="text-gray-600 text-sm">{order.customer.phone}</p>
                   {order.customer.notes && (
-                    <div className="mt-2 p-2 bg-rose-50 rounded">
+                    <div className="mt-2 p-2 bg-[#FFFFF4] rounded">
                       <p className="text-xs text-rose-700">
                         <strong>Observações:</strong> {order.customer.notes}
                       </p>
@@ -313,7 +313,7 @@ export default function OrderConfirmationPage() {
           </section>
 
           {/* Próximos Passos */}
-          <section className="bg-rose-50 rounded-lg p-4 mb-6">
+          <section className="bg-[#FFFFF4] rounded-lg p-4 mb-6">
             <h4 className="font-bold text-gray-800 mb-2">Próximos Passos</h4>
             <ul className="text-sm text-gray-600 space-y-1">
               <li>• Você receberá uma confirmação por WhatsApp no número {order.customer.phone}</li>
@@ -336,7 +336,7 @@ export default function OrderConfirmationPage() {
           </button>
           <button
             onClick={handleBackToHome}
-            className="w-full border border-rose-500 text-rose-500 hover:bg-rose-50 font-bold py-3 px-6 rounded-lg transition-colors"
+            className="w-full border border-rose-500 text-rose-500 hover:bg-[#FFFFF4] font-bold py-3 px-6 rounded-lg transition-colors"
           >
             Voltar à Loja
           </button>

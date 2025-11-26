@@ -14,6 +14,7 @@ import {
 } from '@heroicons/react/24/outline';
 import { Header } from '@/components/Client/Header';
 import { useCart } from '@/contexts/CartContext';
+import { Footer } from '@/components/Client/Footer';
 
 export default function CartPage() {
   const router = useRouter();
@@ -58,7 +59,20 @@ export default function CartPage() {
     router.push('/');
   };
 
-  if (cartItems.length === 0) {
+  const formatExtras = (extras: any[]) => {
+    if (!extras || !Array.isArray(extras)) return '';
+    
+    return extras.map(extra => {
+      if (typeof extra === 'string') {
+        return extra;
+      } else if (extra && typeof extra === 'object') {
+        return `${extra.quantity}x ${extra.name}`;
+      }
+      return '';
+    }).filter(Boolean).join(', ');
+  };
+
+if (cartItems.length === 0) {
     return (
       <div className="min-h-screen bg-[#FFFFF4]">
         <Header />
@@ -212,7 +226,9 @@ export default function CartPage() {
                     {item.customization.extras && item.customization.extras.length > 0 && (
                       <div>
                         <strong className="text-gray-600">Extras:</strong>
-                        <p className="text-[#4F2712]">{item.customization.extras.join(', ')}</p>
+                        <p className="text-[#4F2712]">
+                          {formatExtras(item.customization.extras)}
+                        </p>
                       </div>
                     )}
                   </div>
